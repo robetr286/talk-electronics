@@ -1,0 +1,14 @@
+{
+  "name": "talk-electronic-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/ignore_zones.spec.js tests/e2e/retouch_flow.spec.js tests/e2e/home.spec.js tests/e2e/scenarioC.spec.js tests/e2e/deskew_manual.spec.js tests/e2e/edge_connectors.spec.js tests/e2e/edge_connectors_auto_refresh.spec.js tests/e2e/fix_symbol_layout.spec.js tests/e2e/netlist_status_and_spice_messages.spec.js tests/e2e/netlist_symbol_history_link.spec.js tests/e2e/diagnostics_readiness.spec.js tests/e2e/diagnostics_corrections.spec.js",
+    "test:e2e:full": "playwright test tests/e2e/ignore_zones.spec.js tests/e2e/retouch_flow.spec.js tests/e2e/home.spec.js tests/e2e/scenarioC.spec.js tests/e2e/deskew_manual.spec.js tests/e2e/edge_connectors.spec.js tests/e2e/edge_connectors_auto_refresh.spec.js tests/e2e/fix_symbol_layout.spec.js tests/e2e/*.spec.js",
+    "debug:accept": "node scripts/debug_accept_playwright.js"
+  }
+}

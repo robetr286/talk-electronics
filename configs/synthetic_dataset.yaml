@@ -1,0 +1,46 @@
+# YOLOv8 Dataset Configuration
+# Syntetyczne schematy elektroniczne wygenerowane przez mock generator
+
+# Ścieżki do datasetu
+path: c:/Users/robet/Desktop/Talk_electronic/flask_gpt_codex/Talk_electronic/data/synthetic  # root directory
+train: images_raw  # train images (50 images bez augmentacji, lub images_augmented dla augmentowanych)
+val: images_raw    # validation images (możesz rozdzielić później scripts/split_dataset.py)
+test: images_raw   # test images (opcjonalne)
+
+# Nazwy klas (zgodne z COCO categories)
+names:
+  0: resistor      # Rezystory
+  1: capacitor     # Kondensatory
+  2: inductor      # Cewki/induktory
+  3: diode         # Diody
+
+# Liczba klas
+nc: 4
+
+# Dodatkowe informacje
+# -----------------
+# Dataset wygenerowany: 13.11.2025
+# Generator: scripts/synthetic/generate_schematic.py (PIL-based mock)
+# Liczba obrazów: 50 (seed 200-249)
+# Liczba anotacji: 639 (167 resistor, 150 capacitor, 165 inductor, 157 diode)
+# Format: COCO Instance Segmentation
+# Augmentacja: Profil 'scan' (paper texture, scanning artifacts, noise)
+#
+# Użycie:
+#   # Trening YOLOv8
+#   yolo task=segment mode=train model=yolov8n-seg.pt data=configs/synthetic_dataset.yaml epochs=100 imgsz=640
+#
+#   # Walidacja
+#   yolo task=segment mode=val model=runs/segment/train/weights/best.pt data=configs/synthetic_dataset.yaml
+#
+#   # Inferencja
+#   yolo task=segment mode=predict model=runs/segment/train/weights/best.pt source=data/synthetic/images_raw
+#
+# Następne kroki:
+#   1. Split dataset na train/val/test (scripts/split_dataset.py)
+#      - train: 70% (35 images)
+#      - val: 15% (8 images)
+#      - test: 15% (7 images)
+#   2. Wygeneruj więcej syntetycznych danych (100-200 images)
+#   3. Dodaj augmentację heavy dla edge cases
+#   4. Merge z prawdziwymi anotacjami z Label Studio

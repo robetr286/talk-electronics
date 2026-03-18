@@ -1,0 +1,13 @@
+resistor:
+  - resistor
+capacitor:
+  - capacitor
+diode:
+  - diode
+ic:
+  - ic
+connector:
+  - connector
+net_label:
+  - net_label
+other: []

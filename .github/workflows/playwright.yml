@@ -1,0 +1,176 @@
+name: Playwright E2E
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # nightly full-run (run the entire test suite slower) — change cron as needed
+  schedule:
+    - cron: '0 2 * * *' # daily at 02:00 UTC
+
+jobs:
+  # Smoke tests — quick validation on PRs / pushes (small, critical set)
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Node deps
+        run: |
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          # Install browsers needed by Playwright tests but avoid installing OS-level extras
+          # (e.g. ffmpeg/system packages) by omitting --with-deps
+          npx playwright install
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -r requirements.txt
+          # Free space on runner after installing heavy wheels
+          pip cache purge || true
+
+      - name: Start Flask app
+        run: |
+          # Start the dev server in the background
+          python -m flask --app app run --host 127.0.0.1 --port 5000 > flask_dev.log 2>&1 &
+          echo $! > flask_dev.pid
+        env:
+          FLASK_ENV: development
+
+      - name: Wait for server port
+        run: |
+          npx wait-on http://127.0.0.1:5000 --timeout 60000
+
+      - name: Run Playwright smoke tests
+        id: playwright-smoke
+        run: |
+          set +e
+          npm run test:e2e:smoke --silent -- --reporter=list
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Podsumowanie Playwright smoke
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.playwright-smoke.outputs.exit_code }}"
+          STATUS="SUCCESS"
+          if [ "$EXIT_CODE" != "0" ]; then STATUS="FAILED"; fi
+          {
+            echo "## Playwright smoke ($STATUS)"
+            echo "- Exit code: $EXIT_CODE"
+            echo "- Artefakty: playwright-artifacts-smoke (report, zrzuty)"
+            echo "- Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Zakończ, jeśli smoke się nie powiódł
+        if: steps.playwright-smoke.outputs.exit_code != '0'
+        run: |
+          echo "Playwright smoke failed (exit ${{ steps.playwright-smoke.outputs.exit_code }})"
+          exit 1
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-smoke
+          path: |
+            playwright-report/**
+            tests/e2e/artifacts/**
+            flask_dev.log
+
+  # Full nightly run — executes the full test suite on schedule (and on-demand)
+  full-suite:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Node deps
+        run: |
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          npx playwright install
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start Flask app
+        run: |
+          python -m flask --app app run --host 127.0.0.1 --port 5000 > flask_dev.log 2>&1 &
+          echo $! > flask_dev.pid
+        env:
+          FLASK_ENV: development
+
+      - name: Wait for server port
+        uses: jakejarvis/wait-action@v0.2.0
+        with:
+          timeout: 60
+          port: 5000
+
+      - name: Run full Playwright tests
+        id: playwright-full
+        run: |
+          set +e
+          npm run test:e2e:full --silent -- --reporter=list
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Podsumowanie Playwright full-suite
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.playwright-full.outputs.exit_code }}"
+          STATUS="SUCCESS"
+          if [ "$EXIT_CODE" != "0" ]; then STATUS="FAILED"; fi
+          {
+            echo "## Playwright full-suite ($STATUS)"
+            echo "- Exit code: $EXIT_CODE"
+            echo "- Artefakty: playwright-artifacts-full (report, zrzuty, flask_dev.log)"
+            echo "- Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Zakończ, jeśli full-suite się nie powiódł
+        if: steps.playwright-full.outputs.exit_code != '0'
+        run: |
+          echo "Playwright full-suite failed (exit ${{ steps.playwright-full.outputs.exit_code }})"
+          exit 1
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-full
+          path: |
+            playwright-report/**
+            tests/e2e/artifacts/**
+            flask_dev.log

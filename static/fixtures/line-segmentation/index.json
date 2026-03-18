@@ -1,0 +1,37 @@
+{
+  "fixtures": [
+    {
+      "id": "cross-binary",
+      "name": "Krzyż binarny (2 linie, 1 węzeł)",
+      "image": "/static/fixtures/line-segmentation/cross_binary.png",
+      "binary": true,
+      "expected": {
+        "segments": 4,
+        "nodes": 5
+      },
+      "notes": "Prosty krzyż z białych linii na czarnym tle."
+    },
+    {
+      "id": "cross-gray",
+      "name": "Krzyż w skali szarości (6 linii, 1 węzeł)",
+      "image": "/static/fixtures/line-segmentation/cross_gray.png",
+      "binary": false,
+      "expected": {
+        "segments": 6,
+        "nodes": 9
+      },
+      "notes": "Wariant z jasnymi liniami na ciemnym tle bez binaryzacji."
+    },
+    {
+      "id": "ladder-binary",
+      "name": "Drabinka binarna (5 linii, 0 węzłów)",
+      "image": "/static/fixtures/line-segmentation/ladder_binary.png",
+      "binary": true,
+      "expected": {
+        "segments": 12,
+        "nodes": 12
+      },
+      "notes": "Dwie szyny i ukośne szczeble, bez przecięć."
+    }
+  ]
+}

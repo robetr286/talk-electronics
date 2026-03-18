@@ -1,0 +1,38 @@
+# YOLOv8 dataset configuration for Talk_electronic symbol detection
+# Adjust the relative paths once the annotated dataset is exported.
+# This file is intentionally lightweight so it can be templated during CI/CD.
+
+# Root folder containing the dataset splits (relative to this YAML file by default).
+path: ../data/annotations/datasets/schematics_v1
+
+# Subdirectories relative to `path`. Replace with actual split names after the dataset is generated.
+train: images/train
+val: images/val
+# Optional test split (leave commented until available).
+# test: images/test
+
+# Label directories should mirror the image split layout.
+nc: 12
+names:
+  0: resistor
+  1: capacitor
+  2: diode
+  3: transistor
+  4: op_amp
+  5: connector
+  6: power_rail
+  7: ground
+  8: ic_pin
+  9: net_label
+  10: measurement_point
+  11: misc_symbol
+
+# Metadata to help downstream tooling. Consumers can ignore this block safely.
+meta:
+  description: "Hybrydowe anotacje (rotated rectangle + polygon) skonwertowane do masek segmentacji"
+  annotation_format: COCO-Instance
+  version: 0.1
+  maintainer: "Talk_electronic ML Team"
+  notes:
+    - "Pliki COCO JSON powinny znajdować się w katalogu labels/*."
+    - "Generator syntetyczny zapisuje obrazy w 8-bit PNG."

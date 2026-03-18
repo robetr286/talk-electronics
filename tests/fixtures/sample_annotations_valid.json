@@ -1,0 +1,26 @@
+{
+  "images": [
+    {
+      "id": 1,
+      "file_name": "triangle_demo_p01_r0_c0.png",
+      "width": 256,
+      "height": 256
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "symbol"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [32, 32, 64, 64],
+      "area": 4096,
+      "iscrowd": 0
+    }
+  ]
+}

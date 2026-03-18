@@ -1,0 +1,45 @@
+name: PR gating — local_patch_repair
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'scripts/**'
+      - 'debug/graph_repair_validation/**'
+      - 'tests/**'
+
+jobs:
+  run-gate:
+    name: Run gating check (fast)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal test deps
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          if [ -f requirements-test.txt ]; then
+            python -m pip install -r requirements-test.txt || true
+          elif [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt || true
+          fi
+
+      - name: Run unit tests for local patch repair
+        run: |
+          python -m pytest -q tests/test_local_patch_repair.py
+
+      - name: Run worker (sample) to emit results
+        run: |
+          # run the worker in fast mode (limit 1) so the gating check has something to validate
+          python scripts/local_patch_repair_worker.py --limit 1 --no-watchdog || true
+
+      - name: Run gating validator
+        run: |
+          # skip worker run inside the gate (we already created results)
+          python scripts/local_patch_repair_gate.py --no-worker || exit 1

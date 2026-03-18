@@ -1,0 +1,38 @@
+{
+  "processing_scale": 1.0,
+  "color_preset": "combo",
+  "junction_patch_export": {
+    "enabled": false,
+    "output_dir": "data/sample_benchmark/junction_patches",
+    "patch_size": 32,
+    "limit_per_image": 64,
+    "default_label": "unknown"
+  },
+  "junction_detector": {
+    "enabled": false,
+    "model_path": "models/junction_classifier.onnx",
+    "threshold_dot_present": 0.6,
+    "threshold_no_dot": 0.6,
+    "provider": "CPUExecutionProvider"
+  },
+  "color_presets": {
+    "combo": {
+      "enable_color_enhancement": true,
+      "color_enhancement_strength": 0.95,
+      "color_enhancement_saturation_threshold": 250,
+      "color_enhancement_value_threshold": 90,
+      "dotted_line_bridge_kernel_size": [3, 1],
+      "dotted_line_bridge_iterations": 0
+    },
+    "combo_dotbridge": {
+      "enable_color_enhancement": true,
+      "color_enhancement_strength": 0.95,
+      "color_enhancement_saturation_threshold": 250,
+      "color_enhancement_value_threshold": 90,
+      "dotted_line_bridge_kernel_size": [3, 1],
+      "dotted_line_bridge_iterations": 1,
+      "dotted_line_bridge_saturation_threshold": 40,
+      "dotted_line_bridge_value_threshold": 215
+    }
+  }
+}

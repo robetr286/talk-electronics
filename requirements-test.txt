@@ -1,0 +1,11 @@
+# Test/development dependencies (minimal)
+pytest>=8
+numpy
+opencv-python-headless
+flask
+pillow
+PyMuPDF==1.23.8
+PyYAML
+python-dateutil
+networkx
+boto3

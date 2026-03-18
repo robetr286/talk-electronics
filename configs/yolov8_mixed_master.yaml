@@ -1,0 +1,11 @@
+path: /home/robert-b-k/Talk_electronics/Talk_electronic/data/yolo_dataset/mixed_master_v1
+train: train/images
+val: test/images
+test: test/images
+
+names:
+  0: resistor
+  1: capacitor
+  2: inductor
+  3: diode
+  4: op_amp

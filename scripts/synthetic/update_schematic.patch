@@ -1,0 +1,37 @@
+--- scripts/synthetic/generate_schematic.py
++++ scripts/synthetic/generate_schematic.py
+@@ -165,24 +165,37 @@
+         """Rysuje symbol cewki — seria 3-4 łuków (klasyczny IEC/ANSI)."""
+         import math
+-        num_bumps = 3
++        import random
++        num_bumps = random.choice([3, 4])
++        # Warianty: 0=zwykła, 1=ferrite (przerywane linie), 2=iron (ciągłe linie)
++        core_type = random.choice([0, 1, 2])
++        
+         if rotation == 0:
+             bump_w = width / num_bumps
+             start_x = x - width // 2
+             # Linie połączenia
+             self.draw.line([x - width // 2 - 20, y, x - width // 2, y], fill=self.line_color, width=2)
+             self.draw.line([x + width // 2, y, x + width // 2 + 20, y], fill=self.line_color, width=2)
+             # Łuki (półkola)
+             for i in range(num_bumps):
+                 bx = start_x + i * bump_w
+                 arc_bbox = [bx, y - height // 2, bx + bump_w, y + height // 2]
+                 self.draw.arc(arc_bbox, start=180, end=0, fill=self.line_color, width=2)
++            
++            # Dodanie rdenia
++            if core_type > 0:
++                core_y1, core_y2 = y - height // 2 - 5, y - height // 2 - 10
++                if core_type == 1: # Ferrite - przerywana
++                    dash_len = np.linspace(start_x, start_x + width, 6) if 'np' in globals() else [start_x + i*(width/5) for i in range(6)]
++                    for i in range(0, len(dash_len)-1, 2):
++                        self.draw.line([int(dash_len[i]), core_y1, int(dash_len[i+1]), core_y1], fill=self.line_color, width=2)
++                        self.draw.line([int(dash_len[i]), core_y2, int(dash_len[i+1]), core_y2], fill=self.line_color, width=2)
++                else: # Iron - ciągła
++                    self.draw.line([start_x, core_y1, start_x + width, core_y1], fill=self.line_color, width=2)
++                    self.draw.line([start_x, core_y2, start_x + width, core_y2], fill=self.line_color, width=2)
+         else:  # 90°
+             bump_h = width / num_bumps
+             start_y = y - width // 2

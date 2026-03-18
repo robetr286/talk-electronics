@@ -1,0 +1,81 @@
+name: Playwright E2E Smoke
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e-smoke:
+    name: E2E Smoke tests (Playwright)
+    timeout-minutes: 25
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json','package.json') }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python requirements
+        run: |
+          if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; elif [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Start Flask dev server
+        # Explicitly set host/port and wait until the server is responsive before running Playwright
+        run: |
+          export FLASK_RUN_HOST=127.0.0.1
+          export FLASK_RUN_PORT=5000
+          nohup python -m flask --app app run --host $FLASK_RUN_HOST --port $FLASK_RUN_PORT > flask.log 2>&1 &
+          npx wait-on http://$FLASK_RUN_HOST:$FLASK_RUN_PORT -t 30000
+          echo "Waiting for /healthz ..."
+          npx wait-on http://$FLASK_RUN_HOST:$FLASK_RUN_PORT/healthz -t 30000 || (echo "healthz failed, dumping flask.log" && tail -n 200 flask.log && exit 1)
+          echo "healthz OK: $(curl -fsS http://$FLASK_RUN_HOST:$FLASK_RUN_PORT/healthz)"
+
+      - name: Run E2E smoke tests
+        run: npm run test:e2e:smoke
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: Upload test results and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            test-results/**
+            flask.log
+          if-no-files-found: warn

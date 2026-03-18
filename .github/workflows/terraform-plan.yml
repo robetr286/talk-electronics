@@ -1,0 +1,27 @@
+name: 'Terraform Plan'
+
+on:
+  pull_request:
+    paths:
+      - 'infra/terraform/**'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.5.7'
+      - name: Terraform Init
+        run: |
+          terraform -chdir=infra/terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="endpoint=${{ secrets.SPACES_ENDPOINT }}" -backend-config="access_key=${{ secrets.SPACES_KEY }}" -backend-config="secret_key=${{ secrets.SPACES_SECRET }}"
+      - name: Terraform Plan
+        run: |
+          terraform -chdir=infra/terraform plan -out=tfplan
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform/tfplan

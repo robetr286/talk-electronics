@@ -1,0 +1,18 @@
+#!/bin/sh
+# Example pre-push hook to run a small set of smoke E2E tests before a git push.
+# Place this file in .git/hooks/pre-push (or install via husky) to enable locally.
+
+echo "Running E2E smoke tests before push..."
+
+# Ensure dev server is running and tests are available. This assumes you run your Flask dev server
+# in another terminal: python -m flask --app app run --host 127.0.0.1 --port 5000
+
+npm run test:e2e:smoke --silent
+ret=$?
+if [ $ret -ne 0 ]; then
+  echo "Smoke tests failed — push aborted. Fix tests or use 'git push --no-verify' to override.";
+  exit 1
+fi
+
+echo "Smoke tests passed — proceeding with push."
+exit 0

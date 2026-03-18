@@ -1,0 +1,100 @@
+﻿name: Pre-push dry-run
+# Docs: see section in `qa_git.md`  direct link:
+# https://github.com/robetr286/Talk_electronic/blob/main/qa_git.md#pre-push-hook-automatyczne-uruchamianie-dev-servera-test-integracyjny-i-pid-clean-up
+# This workflow performs a quick sanity check (dry-run) to ensure the pre-push hook is non-interactive and cleans up the pid file.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+  schedule:
+    # Daily sanity check of the pre-push hook flow (03:30 UTC)
+    - cron: '30 3 * * *'
+
+jobs:
+  prepush-dry-run:
+    name: Pre-push dry-run (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show git info
+        run: |
+          git --version
+          git status --porcelain
+
+      - name: Install pre-push hook (enable auto-start)
+        shell: pwsh
+        run: |
+          Write-Host "Installing pre-push hook and enabling auto-start"
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/hooks/install-pre-push.ps1 -AutoStart
+
+      - name: Run Pester unit tests (PowerShell)
+        shell: pwsh
+        run: |
+          Write-Host "Running Pester tests under tests/pester"
+          try {
+            pwsh -NoProfile -ExecutionPolicy Bypass -Command "Import-Module Pester -MinimumVersion 5.0; Invoke-Pester -Script 'tests/pester' -PassThru | Tee-Object pester_test.log; exit $LASTEXITCODE"
+          } catch {
+            Write-Host "Pester invocation failed; attempting to install Pester and retry"
+            pwsh -NoProfile -ExecutionPolicy Bypass -Command "Install-Module -Name Pester -Force -Scope CurrentUser; Import-Module Pester; Invoke-Pester -Script 'tests/pester' -PassThru | Tee-Object pester_test.log; exit $LASTEXITCODE"
+          }
+
+      - name: Run pre-push interactive integration test (simulate decline)
+        shell: pwsh
+        run: |
+          Write-Host "Running interactive integration test: tests/integration/pre-push-interactive-test.ps1"
+          # Ensure auto-start is disabled for this step
+          git config --local hooks.devserver.autoStart false
+          pwsh -NoProfile -ExecutionPolicy Bypass -Command "& { & 'tests/integration/pre-push-interactive-test.ps1' 2>&1 | Tee-Object prepush_interactive_test.log; exit $LASTEXITCODE }"
+
+      - name: Run pre-push dry-run integration test (save logs)
+        shell: pwsh
+        env:
+          CI: true
+        run: |
+          Write-Host "Running integration test: tests/integration/pre-push-dry-run.ps1"
+          # Run the test and tee output to a logfile so we can upload it on failure
+          pwsh -NoProfile -ExecutionPolicy Bypass -Command "& { & 'tests/integration/pre-push-dry-run.ps1' 2>&1 | Tee-Object prepush_test.log; exit $LASTEXITCODE }"
+
+      - name: Print concise status message (success)
+        if: success()
+        shell: pwsh
+        run: |
+          Write-Host "Pre-push dry-run: SUCCESS" -ForegroundColor Green
+
+      - name: Print concise status message and upload logs (failure)
+        if: failure()
+        shell: pwsh
+        run: |
+          Write-Host "Pre-push dry-run: FAILED  uploading logs" -ForegroundColor Red
+
+      - name: Upload test log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepush-test-log
+          path: prepush_test.log
+          retention-days: 7
+
+      - name: Create GitHub issue with logs (on failure)
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const runId = process.env.GITHUB_RUN_ID;
+            const sha = process.env.GITHUB_SHA || '';
+            const repoUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}`;
+            const title = `Pre-push dry-run FAILED ${sha.substring(0,7)}`;
+            const body = `Pre-push dry-run failed in run [${runId}](${repoUrl}/actions/runs/${runId}) for commit \`${sha}\`.
+            Full log uploaded as artifact "prepush-test-log".`;
+            const { data: issues } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'pre-push-dry-run' });
+            const exists = issues && issues.some(i => i.title === title);
+            if (!exists) {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['pre-push-dry-run','automated'] });
+              core.info('Created issue for failed pre-push dry-run.');
+            } else {
+              core.info('Issue already exists; skipping creation.');
+            }

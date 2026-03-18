@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Model weights (not distributed)
+*.pt
+*.pth
+*.onnx
+*.h5
+*.weights
+*.pkl
+
+# Data (not distributed)
+data/
+OCR_test/
+ocr_eval/
+textract_test/
+png_dla_label-studio/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+secrets.*
+
+# Logs
+*.log
+
+# SQLite
+*.db
+*.sqlite3

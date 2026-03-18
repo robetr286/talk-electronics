@@ -1,0 +1,45 @@
+name: OCR Eval CI — prepare & test
+
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+
+jobs:
+  prepare-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+      - name: Prepare OCR eval fixtures (prefer repo samples)
+        env:
+          OCR_EVAL_CI_COUNT: 18
+        run: |
+          COUNT=0
+          if [ -d "ocr_eval/ci-samples" ]; then
+            COUNT=$(find ocr_eval/ci-samples -maxdepth 1 -type f -name '*.json' | wc -l)
+          fi
+          echo "Found $COUNT json samples in ocr_eval/ci-samples"
+          if [ "$COUNT" -ge "${OCR_EVAL_CI_COUNT}" ]; then
+            echo "Using repo ci-samples (count=$COUNT)"
+            rm -rf ocr_eval/ci || true
+            mkdir -p ocr_eval/ci
+            cp -a ocr_eval/ci-samples/* ocr_eval/ci/
+          else
+            echo "Not enough repo samples ($COUNT < ${OCR_EVAL_CI_COUNT}) — generating ${OCR_EVAL_CI_COUNT} samples"
+            python scripts/generate_sample_ocr_ci.py --out-dir ocr_eval --count ${OCR_EVAL_CI_COUNT}
+          fi
+      - name: List generated files
+        run: |
+          ls -la ocr_eval/ci || true
+      - name: Run CI test for ocr_eval/ci
+        env:
+          OCR_EVAL_CI_COUNT: 18
+        run: |
+          pytest -q tests/test_ocr_eval_ci.py

@@ -1,0 +1,2686 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk electronics</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        :root {
+            --sidebar-bg: #05121d;
+            --sidebar-highlight: rgba(12, 255, 160, 0.12);
+            --accent: #31f576;
+            --accent-soft: #74ffb1;
+            --accent-dark: #1aa44d;
+            --text-strong: #05121d;
+            --text-primary: #e6fff3;
+            --text-secondary: #8cc4a3;
+            --surface: #ffffff;
+            --surface-muted: #edf7f1;
+            --border-subtle: rgba(12, 255, 160, 0.24);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: var(--surface-muted);
+            color: #1f2937;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        #warningOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            z-index: 1050;
+        }
+
+        #warningOverlay .warning-box {
+            max-width: 720px;
+            background: #1f1f1f;
+            border: 2px solid #ffcc00;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 0 25px rgba(255, 204, 0, 0.4);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        #warningOverlay button {
+            font-weight: 600;
+        }
+
+        #appContent.hidden {
+            display: none;
+        }
+
+        #appContent {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap; /* Force side-by-side */
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            color: var(--text-primary);
+            padding: 2.5rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 2rem;
+            flex-shrink: 0; /* Sidebar never shrinks */
+        }
+
+
+        .brand {
+            font-size: 1.65rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .sidebar p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .tab-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .tab-group {
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tab-group.primary-workflow {
+            border: 2px solid #FFD700;
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .tab-group.analysis-workflow {
+            border: 2px solid #00BFFF;
+            background: rgba(0, 191, 255, 0.05);
+        }
+
+        .tab-group-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5rem;
+            padding: 0 0.25rem;
+        }
+
+        .tab-group.primary-workflow .tab-group-label {
+            color: #FFD700;
+        }
+
+        .tab-group.analysis-workflow .tab-group-label {
+            color: #00BFFF;
+        }
+
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 0.9rem; /* reduced height to save sidebar space */
+            border-radius: 0.6rem;
+            border: 1px solid transparent;
+            background: var(--sidebar-highlight);
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .tab-btn:hover {
+            background: rgba(116, 255, 177, 0.12);
+            color: var(--text-primary);
+            transform: translateX(4px);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(120deg, var(--accent) 0%, var(--accent-soft) 80%);
+            color: var(--text-strong);
+        }
+
+        /* highlight rows the user has edited manually */
+        #ocrTable tbody tr.manual {
+            background-color: #fff3cd; /* light yellow */
+        }
+
+        /* Diagnostics group: visually separate section with light green border */
+        .tab-group.diagnostics {
+            border: 2px solid #28a745;
+            background: rgba(40, 167, 69, 0.05);
+            padding: 0.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .tab-group.diagnostics .tab-group-label {
+            color: #28a745; /* light green to match border */
+        }
+
+        /* Visible hero area inside the diagnostics tab to avoid empty-looking panel */
+        .diagnostics-hero {
+            background: #ffffff; /* force visible surface */
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.03);
+            border-radius: 0.5rem;
+            color: #1f2937; /* dark text for white surface */
+        }
+
+        .about-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .about-panel {
+            display: none;
+            margin-top: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(49, 245, 118, 0.2);
+            background: rgba(11, 50, 33, 0.6);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .about-panel.active {
+            display: block;
+        }
+
+        .main-panel {
+            flex: 1;
+            min-width: 0;
+            padding: 2.5rem 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            overflow-x: hidden; /* Prevent horizontal spill */
+        }
+
+        .tab-panel {
+            display: none;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .tab-panel.active {
+            display: flex;
+        }
+
+        /* Diagnostics tab: ensure readable text regardless of theme caching */
+        .tab-panel[data-tab-panel="diagnostics"] {
+            color: #1f2937;
+            background: #f6fbf8;
+            padding: 1rem;
+            border-radius: 0.75rem;
+        }
+
+        /* Diagnostics tab: ensure readable text regardless of theme caching */
+        .tab-panel[data-tab-panel="diagnostics"] {
+            color: #1f2937;
+        }
+
+        .workspace-stack {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+
+        .workspace-stack.symbol-detection-stack {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        /* Ensure ignore-zones panel uses full width of the workspace area */
+        .workspace-stack.ignore-zones-stack > .surface-card {
+            grid-column: span 2;
+        }
+
+        /* Make the ignore canvas area taller and allow the canvas to expand to full width */
+        .workspace-stack.ignore-zones-stack .symbol-source-thumb {
+            min-height: 420px;
+            align-items: stretch;
+        }
+        /* Ignore canvas powinien korzystać z własnych wymiarów (ustawianych w JS) */
+        #ignoreCanvas {
+            width: auto !important;
+            height: auto !important;
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .workspace-stack.symbol-detection-stack > .surface-card {
+            grid-column: span 1;
+        }
+
+        .workspace-stack.symbol-detection-stack {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .surface-card {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 1.75rem;
+            box-shadow: 0 18px 36px rgba(5, 18, 29, 0.08);
+            border: 1px solid rgba(5, 18, 29, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .workspace-stack:not(.symbol-detection-stack) .surface-card.preview-canvas-card {
+            grid-column: span 2;
+        }
+
+        .workspace-stack:not(.symbol-detection-stack) .surface-card.symbol-preview-card {
+            grid-column: span 2;
+        }
+
+        /* Export card should span two columns only in multi-column workspace */
+        .workspace-stack:not(.symbol-detection-stack) .surface-card.export-card {
+            grid-column: span 2;
+        }
+
+        .upload-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .filename-pill {
+            background: rgba(49, 245, 118, 0.16);
+            border: 1px solid rgba(49, 245, 118, 0.36);
+            border-radius: 0.75rem;
+            padding: 0.6rem 0.9rem;
+            font-weight: 600;
+        }
+
+        .filename-pill.hidden {
+            display: none;
+        }
+
+        .temp-files-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(220, 53, 69, 0.08);
+            border: 1px solid rgba(220, 53, 69, 0.25);
+            border-radius: 0.75rem;
+        }
+
+        .temp-files-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        #cleanupBtn {
+            align-self: flex-start;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .symbol-preview-frame {
+            width: 100%;
+            min-height: 520px;
+            max-height: 820px;
+            overflow: auto;
+            cursor: grab;
+            background: rgba(5, 18, 29, 0.02);
+            border: 1px solid rgba(49, 245, 118, 0.16);
+            border-radius: 0.75rem;
+        }
+
+        .symbol-source-thumb {
+            border: 1px dashed var(--border-subtle);
+            border-radius: 0.75rem;
+            background: rgba(5, 18, 29, 0.02);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 110px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .symbol-source-thumb img {
+            max-width: 100%;
+            max-height: 160px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .symbol-thumb-placeholder {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .symbol-history-section {
+            margin-top: 2rem;
+        }
+
+        .symbol-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .symbol-history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .symbol-history-card {
+            border: 1px solid rgba(5, 18, 29, 0.08);
+            border-radius: 0.75rem;
+            background: rgba(5, 18, 29, 0.03);
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-height: 210px;
+        }
+
+        .symbol-history-card h4 {
+            font-size: 0.95rem;
+            margin: 0;
+            font-weight: 600;
+            color: var(--accent-dark);
+        }
+
+        .symbol-history-card p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .symbol-history-thumb {
+            border: 1px dashed var(--border-subtle);
+            border-radius: 0.6rem;
+            background: rgba(5, 18, 29, 0.02);
+            min-height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .symbol-history-thumb img {
+            max-width: 100%;
+            max-height: 140px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .symbol-history-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .symbol-history-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        .symbol-history-source {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .symbol-preview-frame:active {
+            cursor: grabbing;
+        }
+
+        .symbol-preview-canvas {
+            display: block;
+            max-width: none;
+        }
+
+        #imageCanvas,
+        #cropCanvas {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 0.75rem;
+            border: 2px dashed var(--border-subtle);
+            background: #f4f8f6;
+        }
+
+        .preview-toolbar,
+        .crop-controls-horizontal {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+            color: var(--accent-dark);
+            background: rgba(49, 245, 118, 0.18);
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+        }
+
+        .control-group,
+        .zoom-group,
+        .crop-zoom-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: 1px solid rgba(49, 245, 118, 0.24);
+            border-radius: 999px;
+            padding: 0.35rem 0.5rem;
+            background: rgba(5, 18, 29, 0.04);
+        }
+
+        .crop-canvases-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+
+        .crop-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pane-heading {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-strong);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .crop-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 400px;
+            background: rgba(5, 18, 29, 0.02);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .crop-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .cropped-preview {
+            min-height: 300px;
+            border: 1px solid rgba(49, 245, 118, 0.16);
+            border-radius: 0.75rem;
+            background: rgba(5, 18, 29, 0.02);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .crop-stats {
+            padding: 1rem;
+            border: 1px solid rgba(49, 245, 118, 0.2);
+            border-radius: 0.75rem;
+            background: rgba(49, 245, 118, 0.08);
+        }
+
+        .crop-stats.hidden {
+            display: none;
+        }
+
+        .stats-list {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.5rem 1rem;
+            margin: 0;
+        }
+
+        .crop-buttons-section {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .crop-buttons-section > button {
+            align-self: flex-start;
+        }
+
+        .crop-instructions {
+            flex: 1 1 100%;
+            margin: 0;
+            padding: 0.75rem 1rem;
+            border: 1px dashed rgba(49, 245, 118, 0.3);
+            border-radius: 0.75rem;
+            background: rgba(49, 245, 118, 0.08);
+            min-height: 3rem;
+            display: flex;
+            align-items: center;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        .crop-instructions.hidden {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .placeholder {
+            padding: 2rem;
+            border: 1px dashed rgba(15, 27, 43, 0.1);
+            border-radius: 1rem;
+            background: rgba(15, 27, 43, 0.04);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(59, 169, 252, 0.16);
+            color: #0b1725;
+            font-weight: 600;
+        }
+
+        .processing-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+
+        .retouch-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+
+        .retouch-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .overlay-legend-panel {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.8rem;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.86);
+            box-shadow: 0 12px 24px rgba(15, 27, 43, 0.16);
+            backdrop-filter: blur(6px);
+            color: #1f2937;
+            z-index: 5;
+        }
+
+        .overlay-legend {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin: 0;
+            color: #4b5563;
+        }
+
+        .legend-dot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 0.85rem;
+            height: 0.85rem;
+            border-radius: 50%;
+            margin-right: 0.35rem;
+            vertical-align: middle;
+            border: 2px solid currentColor;
+            background: transparent;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+            position: relative;
+        }
+
+        .legend-essential {
+            color: rgba(239, 68, 68, 0.9);
+            box-shadow: 0 0 2px rgba(239, 68, 68, 0.45);
+        }
+
+        .legend-essential::after {
+            content: '';
+            position: absolute;
+            inset: -0.2rem;
+            border: 1.5px solid rgba(239, 68, 68, 0.35);
+            border-radius: 50%;
+        }
+
+        .legend-non-essential {
+            color: rgba(234, 179, 8, 0.9);
+        }
+
+        .legend-endpoint {
+            color: rgba(59, 130, 246, 0.9);
+        }
+
+        .legend-isolated {
+            color: rgba(107, 114, 128, 0.9);
+        }
+
+        .legend-unspecified {
+            color: rgba(148, 163, 184, 0.8);
+        }
+
+        .retouch-stage {
+            min-height: clamp(320px, 55vh, 680px);
+            border: 1px dashed rgba(15, 27, 43, 0.12);
+            border-radius: 0.75rem;
+            background: rgba(5, 18, 43, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            overflow: auto;
+            position: relative;
+        }
+
+        .retouch-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 2;
+            border-radius: 0.75rem;
+            transform-origin: center center;
+            transition: transform 0.15s ease;
+        }
+
+        .retouch-placeholder {
+            margin: 0;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .retouch-image {
+            display: block;    /* KLUCZOWE: umożliwia kontrolę width */
+            max-width: 100%;
+            max-height: clamp(360px, 62vh, 820px); /* Ogranicz wysokość do rozmiaru kontenera */
+            width: auto;       /* Pozwól na skalowanie przy zachowaniu proporcji */
+            height: auto;
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 16px rgba(5, 18, 29, 0.08);
+            background: #fff;
+            transform-origin: center center;
+            transition: transform 0.2s ease;
+            align-self: center;
+        }
+
+        #canvasRetouchEditor {
+            transform-origin: center center;
+            transition: transform 0.2s ease;
+        }
+
+        .retouch-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .processing-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .processing-stage {
+            position: relative;
+            min-height: 360px;
+            border: 1px solid rgba(5, 18, 29, 0.12);
+            border-radius: 0.75rem;
+            background: rgba(5, 18, 29, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .processing-stage img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .processing-stage.zoomable {
+            cursor: grab;
+        }
+
+        .processing-stage.zoomable.is-panning {
+            cursor: grabbing;
+        }
+
+        .retouch-stage.zoomable {
+            cursor: grab;
+        }
+
+        .retouch-stage.zoomable.is-panning {
+            cursor: grabbing;
+        }
+
+        .processing-placeholder {
+            margin: 0;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .processing-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .processing-filter-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .processing-filter-group {
+            padding: 0.75rem;
+            border: 1px solid rgba(49, 245, 118, 0.16);
+            border-radius: 0.75rem;
+            background: rgba(5, 18, 29, 0.04);
+        }
+
+        .processing-status {
+            margin: 0;
+            font-weight: 600;
+            color: var(--accent-dark);
+        }
+
+        .processing-select {
+            max-width: 320px;
+        }
+
+        .processing-toolbar {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: 1px solid rgba(49, 245, 118, 0.24);
+            border-radius: 999px;
+            padding: 0.35rem 0.5rem;
+            background: rgba(5, 18, 29, 0.04);
+        }
+
+        .processing-history {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .processing-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .processing-history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .processing-history-empty {
+            padding: 0.75rem 1rem;
+            border: 1px dashed rgba(5, 18, 29, 0.12);
+            border-radius: 0.75rem;
+            background: rgba(5, 18, 29, 0.02);
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .processing-history-item {
+            display: grid;
+            grid-template-columns: minmax(64px, 96px) 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(5, 18, 29, 0.12);
+            border-radius: 0.75rem;
+            background: var(--surface);
+        }
+
+        .processing-history-item[data-active="true"] {
+            border-color: rgba(49, 245, 118, 0.6);
+            box-shadow: 0 0 0 1px rgba(49, 245, 118, 0.25);
+        }
+
+        .processing-history-thumb {
+            position: relative;
+            width: 100%;
+            max-width: 96px;
+            aspect-ratio: 1 / 1;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: rgba(5, 18, 29, 0.04);
+            border: 1px solid rgba(5, 18, 29, 0.08);
+        }
+
+        .processing-history-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .processing-history-thumb[data-empty="true"] {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            border-style: dashed;
+        }
+
+        .processing-history-meta {
+            margin: 0.15rem 0 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .processing-history-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-self: start;
+        }
+
+        @media (max-width: 768px) {
+            .processing-history-item {
+                grid-template-columns: 1fr;
+            }
+
+            .processing-history-thumb {
+                max-width: 100%;
+                width: 100%;
+                aspect-ratio: 4 / 3;
+            }
+
+            .processing-history-actions {
+                justify-content: flex-start;
+            }
+        }
+
+        /* Responsive layout disabled - sidebar always side-by-side */
+        /*
+        @media (max-width: 768px) {
+            .processing-grid { grid-template-columns: 1fr; }
+        }
+        */
+
+
+        .line-seg-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+            align-items: flex-start;
+            gap: 1.75rem;
+        }
+
+        .line-seg-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .line-seg-column-primary {
+            gap: 1.5rem;
+        }
+
+        .line-seg-column-secondary {
+            gap: 1.25rem;
+        }
+
+        .line-seg-source-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .line-seg-controls-hint {
+            margin: 0 0 0.85rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .line-seg-overlay-toggle .form-check-label {
+            font-size: 0.85rem;
+        }
+
+        .line-seg-overlay-toggle .form-check-input {
+            cursor: pointer;
+        }
+
+        @media (max-width: 1280px) {
+            .line-seg-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+            .line-seg-panel {
+                border: 1px solid rgba(5, 18, 29, 0.12);
+                border-radius: 0.85rem;
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 6px 18px rgba(5, 18, 29, 0.06);
+                padding: 1.25rem;
+                display: flex;
+                flex-direction: column;
+                gap: 0.9rem;
+            }
+
+            .line-seg-panel h5,
+            .line-seg-panel h4 {
+                margin: 0;
+                font-weight: 600;
+                color: var(--text-strong);
+            }
+
+            .line-seg-panel .processing-filter-group {
+                background: rgba(5, 18, 29, 0.03);
+            }
+
+            .line-seg-log-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                max-height: 320px;
+                overflow-y: auto;
+                padding-right: 0.25rem;
+                scrollbar-gutter: stable both-edges;
+            }
+
+            .line-seg-log-entry {
+                border: 1px solid rgba(5, 18, 29, 0.12);
+                border-radius: 0.65rem;
+                padding: 0.65rem 0.75rem;
+                background: rgba(255, 255, 255, 0.92);
+                display: flex;
+                flex-direction: column;
+                gap: 0.35rem;
+            }
+
+            .line-seg-log-entry[data-active="true"] {
+                border-color: rgba(49, 245, 118, 0.6);
+                box-shadow: 0 0 0 1px rgba(49, 245, 118, 0.25);
+            }
+
+            .line-seg-log-entry-head {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                gap: 0.75rem;
+            }
+
+            .line-seg-log-entry-tag {
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--accent-dark);
+                background: rgba(49, 245, 118, 0.14);
+                border-radius: 999px;
+                padding: 0.1rem 0.65rem;
+            }
+
+            .line-seg-log-entry-meta {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.6rem;
+                font-size: 0.8rem;
+                color: #4b5563;
+            }
+
+            .line-seg-log-entry-note {
+                font-size: 0.82rem;
+                color: #334155;
+            }
+
+            #lineSegSourceStage.log-mode,
+            #lineSegSourceStage.log-mode .retouch-image {
+                cursor: crosshair !important;
+            }
+
+            #lineSegSourceStage.is-empty .overlay-legend-panel {
+                display: none;
+            }
+
+        .diagnostic-flagged-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .diagnostic-flagged-item {
+            border: 1px solid rgba(5, 18, 29, 0.12);
+            border-radius: 0.65rem;
+            padding: 0.55rem 0.7rem;
+            background: rgba(255, 255, 255, 0.92);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .diagnostic-flagged-item:hover {
+            cursor: pointer;
+            border-color: rgba(37, 99, 235, 0.32);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+        }
+
+        .diagnostic-flagged-item[data-active="true"] {
+            border-color: rgba(37, 99, 235, 0.55);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+            background: rgba(219, 234, 254, 0.6);
+        }
+
+        .diagnostic-flagged-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.75rem;
+        }
+
+        .diagnostic-score-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.1rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #0b1725;
+            background: rgba(49, 245, 118, 0.18);
+            border: 1px solid rgba(49, 245, 118, 0.28);
+        }
+
+        .diagnostic-score-pill[data-label="low"] {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: rgba(239, 68, 68, 0.32);
+            color: #7f1d1d;
+        }
+
+        .diagnostic-chat-log {
+            max-height: 220px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.25rem 0.1rem;
+            background: rgba(5, 18, 29, 0.03);
+            border: 1px solid rgba(5, 18, 29, 0.08);
+            border-radius: 0.65rem;
+        }
+
+        .diagnostic-chat-message {
+            border-radius: 0.65rem;
+            padding: 0.55rem 0.75rem;
+            line-height: 1.35;
+            font-size: 0.9rem;
+            border: 1px solid rgba(5, 18, 29, 0.12);
+            background: rgba(255, 255, 255, 0.96);
+        }
+
+        .diagnostic-chat-message[data-role="user"] {
+            align-self: flex-end;
+            background: rgba(49, 245, 118, 0.22);
+            border-color: rgba(49, 245, 118, 0.32);
+        }
+
+        .diagnostic-chat-message[data-role="assistant"] {
+            background: rgba(5, 18, 29, 0.06);
+        }
+
+        .diagnostic-chat-timestamp {
+            display: block;
+            margin-top: 0.35rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div id="warningOverlay">
+        <div class="warning-box">
+            <h2 class="mb-3">⚠️ OGRANICZENIE ODPOWIEDZIALNOŚCI ⚠️</h2>
+            <p class="mb-2">Zadaniem aplikacji jest pomóc w naprawie elektroniki – możemy mieć do czynienia z napięciami 230V zagrażającymi życiu i zdrowiu użytkownika.</p>
+            <p class="mb-2">Autor aplikacji dołożył wszelkich starań, aby zapewnić dokładność i poprawność materiałów w niej zawartych. Mimo to aplikacja dostarczana jest w stanie „takim, w jakim jest” ("as is"), bez żadnych gwarancji.</p>
+            <p class="mb-2">Użytkownik aplikacji ponosi pełną i wyłączną odpowiedzialność za wszelkie działania i decyzje podjęte na podstawie treści i funkcji aplikacji.</p>
+            <p class="mb-3">Autor aplikacji nie ponosi odpowiedzialności za jakiekolwiek szkody bezpośrednie, pośrednie, przypadkowe lub wynikowe, straty finansowe ani błędy powstałe w wyniku korzystania z tego narzędzia.</p>
+            <p class="fw-semibold">⚡ ZAWSZE ZACHOWAJ OSTROŻNOŚĆ PODCZAS PRACY Z ELEKTRONIKĄ ⚡</p>
+            <button id="acceptWarning" class="btn btn-warning mt-3">Rozumiem i akceptuję</button>
+        </div>
+    </div>
+
+    <div id="appContent" class="hidden">
+        <aside class="sidebar">
+            <div>
+                <div class="brand">Talk electronics</div>
+                <nav class="tab-list" aria-label="Sekcje aplikacji">
+                    <div class="tab-group primary-workflow">
+                        <div class="tab-group-label">Przygotowanie obrazu</div>
+                        <button class="tab-btn active" data-tab="workspace">Przestrzeń robocza</button>
+                        <button class="tab-btn" data-tab="crop-area">Kadrowanie</button>
+                        <button class="tab-btn" data-tab="image-processing">Binaryzacja obrazu</button>
+                        <button class="tab-btn" data-tab="manual-retouch">Automatyczny retusz</button>
+                        <button class="tab-btn" data-tab="canvas-retouch">Narzędzia retuszu</button>
+                    </div>
+                    <div class="tab-group analysis-workflow">
+                        <div class="tab-group-label">Analiza schematu</div>
+                        <button class="tab-btn" data-tab="ignore-zones">Strefy ignorowane</button>
+                        <button class="tab-btn" data-tab="symbol-detection">Detekcja symboli</button>
+                        <button class="tab-btn" data-tab="ocr">OCR</button>
+                        <button class="tab-btn" data-tab="line-segmentation">Segmentacja linii/węzłów</button>
+                        <button class="tab-btn" data-tab="edge-connectors">Łączenie schematów</button>
+                    </div>
+
+                    <div class="tab-group diagnostics">
+                        <div class="tab-group-label">Diagnostyka</div>
+                        <button class="tab-btn" data-tab="diagnostics">Diagnostyka</button>
+                    </div>
+
+                    <div style="flex: 1;"></div>
+
+                    <div class="tab-group mt-auto">
+                        <button class="tab-btn" data-tab="maintenance">Konserwacja</button>
+                        <button class="tab-btn" data-tab="about">O aplikacji</button>
+                    </div>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <section class="tab-panel active" data-tab-panel="workspace" aria-label="Przestrzeń robocza">
+                <div class="workspace-stack symbol-detection-stack">
+                    <article class="surface-card" aria-labelledby="uploadHeading">
+                        <div>
+                            <h3 id="uploadHeading" class="h5 mb-2">Wczytaj schemat</h3>
+                            <p class="text-muted mb-0">Obsługiwane są pliki PDF oraz obrazy (PNG, JPG, WEBP, TIFF, BMP). Po dodaniu możesz przechodzić między stronami i przybliżać obraz.</p>
+                        </div>
+                        <div class="upload-controls">
+                            <input id="fileInput" class="form-control" type="file" accept="application/pdf,image/png,image/jpeg,image/webp,image/bmp,image/tiff">
+                            <div class="d-flex gap-2 align-items-center">
+                                <button id="uploadBtn" class="btn btn-success" type="button">Wczytaj plik</button>
+                                <button id="uploadFromUploadsBtn" class="btn btn-outline-secondary" type="button">Wczytaj z uploads</button>
+                                <div id="uploadedFilename" class="filename-pill hidden"></div>
+                                <div id="uploadActionsSection" class="ms-2"></div>
+                            </div>
+
+                            <div class="form-check ms-3 mt-2">
+                                <input class="form-check-input" type="checkbox" value="" id="uploadSaveOnLoadCheckbox" checked>
+                                <label class="form-check-label small text-muted" for="uploadSaveOnLoadCheckbox">
+                                    Automatycznie zapisz kopię na serwerze przy wczytaniu
+                                </label>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Modal: wybór plików z uploads -->
+                    <dialog id="uploadsModal" class="modal-dialog" aria-hidden="true">
+                        <form method="dialog" class="modal-content">
+                            <h3 class="h6 mb-2">Wczytaj plik z uploads</h3>
+                            <div id="uploadsList" style="max-height: 400px; overflow:auto; margin-bottom: 0.5rem;"></div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button id="uploadsCloseBtn" class="btn btn-sm btn-secondary" type="button">Zamknij</button>
+                            </div>
+                        </form>
+                    </dialog>
+
+                    <article class="surface-card" aria-labelledby="previewControlsHeading">
+                        <div class="preview-toolbar">
+                            <span class="page-status">Strona <span id="currentPageLabel">-</span> / <span id="totalPagesLabel">-</span></span>
+                            <div class="control-group" role="group" aria-label="Nawigacja po stronach">
+                                <button id="prevPageBtn" class="btn btn-outline-success" type="button">&larr;</button>
+                                <input id="pageInput" class="form-control form-control-sm" type="number" min="1" value="" placeholder="#">
+                                <button id="nextPageBtn" class="btn btn-outline-success" type="button">&rarr;</button>
+                            </div>
+                            <div class="zoom-group" role="group" aria-label="Zoom">
+                                <button id="zoomOutBtn" class="btn btn-outline-success" type="button">-</button>
+                                <span id="zoomLabel" class="fw-semibold">--%</span>
+                                <button id="zoomInBtn" class="btn btn-outline-success" type="button">+</button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="surface-card export-card" aria-labelledby="exportHeading">
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex flex-wrap align-items-center gap-3">
+                                <h3 id="exportHeading" class="h5 mb-0">Eksport strony do PNG</h3>
+                                <span id="exportInfoLabel" class="status-pill">Brak załadowanego pliku</span>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-end gap-3">
+                                <div class="d-flex flex-column" style="min-width: 300px;">
+                                    <label for="exportDpiInput" class="form-label mb-1">Rozdzielczość eksportu</label>
+
+                                    <!-- Presety DPI -->
+                                    <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Presety DPI">
+                                        <input type="radio" class="btn-check" name="dpiPreset" id="dpiAuto" value="auto" disabled>
+                                        <label class="btn btn-outline-secondary" for="dpiAuto">Auto</label>
+
+                                        <input type="radio" class="btn-check" name="dpiPreset" id="dpi2x" value="2x" disabled>
+                                        <label class="btn btn-outline-secondary" for="dpi2x">2×</label>
+
+                                        <input type="radio" class="btn-check" name="dpiPreset" id="dpi3x" value="3x" disabled>
+                                        <label class="btn btn-outline-secondary" for="dpi3x">3×</label>
+
+                                        <input type="radio" class="btn-check" name="dpiPreset" id="dpiMax" value="max" disabled>
+                                        <label class="btn btn-outline-secondary" for="dpiMax">Max</label>
+
+                                        <input type="radio" class="btn-check" name="dpiPreset" id="dpiCustom" value="custom" disabled>
+                                        <label class="btn btn-outline-secondary" for="dpiCustom">Własne</label>
+                                    </div>
+
+                                    <!-- Pole własnego DPI -->
+                                    <div class="input-group input-group-sm">
+                                        <input id="exportDpiInput" class="form-control" type="number" min="72" max="1200" step="50" placeholder="np. 300" disabled>
+                                        <span class="input-group-text">DPI</span>
+                                    </div>
+
+                                    <!-- Info o DPI -->
+                                    <div class="form-text mt-1">
+                                        <div id="exportDpiInfo" class="text-muted">
+                                            <small>Zakres: <span id="exportMinDpiValue">72</span>-<span id="exportMaxDpiValue">--</span> DPI</small>
+                                        </div>
+                                        <div id="exportDpiPreview" class="text-primary" style="display: none;">
+                                            <small><strong id="exportDpiPreviewValue">--</strong> DPI → <span id="exportDpiPreviewDimensions">-- × -- px</span></small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button id="downloadPageBtn" class="btn btn-outline-primary" type="button" disabled>Pobierz bieżącą stronę</button>
+                                </div>
+                            </div>
+                            <div id="exportStatusLabel" class="form-text text-muted"></div>
+                        </div>
+                    </article>
+
+                    <article class="surface-card preview-canvas-card" aria-labelledby="canvasHeading">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 id="canvasHeading" class="h5 mb-0">Podgląd pliku</h3>
+                            <span class="status-pill">Przytrzymaj i przeciągnij, aby przesuwać</span>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="imageCanvas" width="1200" height="850" aria-label="Podgląd bieżącej strony"></canvas>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="crop-area" aria-label="Kadrowanie">
+                <article class="surface-card" aria-labelledby="cropHeading">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <h3 id="cropHeading" class="h5 mb-0">Kadrowanie fragmentów</h3>
+                            <div class="crop-zoom-controls" role="group" aria-label="Powiększenie widoku kadrowania">
+                                <button id="cropZoomOutBtn" class="btn btn-outline-success" type="button">-</button>
+                                <span id="cropZoomLabel" class="fw-semibold">100%</span>
+                                <button id="cropZoomInBtn" class="btn btn-outline-success" type="button">+</button>
+                                <button id="cropZoomResetBtn" class="btn btn-outline-success" type="button">Reset</button>
+                            </div>
+                        </div>
+
+                        <div id="cropButtonsSection" class="crop-buttons-section">
+                            <button id="startCropBtn" class="btn btn-outline-success" type="button">Zaznaczenie prostokątne</button>
+                            <button id="polygonCropBtn" class="btn btn-outline-success" type="button">Zaznaczenie wielokątne</button>
+                            <button id="resetCropBtn" class="btn btn-outline-secondary" type="button">Wyczyść</button>
+                            <button id="saveCropBtn" class="btn btn-success" type="button" disabled>Zapisz na serwer</button>
+                            <button id="downloadCropBtn" class="btn btn-outline-primary" type="button" disabled title="Zapisz aktualny fragment na dysku lokalnym">
+                                💾 Zapisz lokalnie
+                            </button>
+                            <button id="overwriteOriginalBtn" class="btn btn-outline-danger" type="button" disabled title="Nadpisze oryginalny plik źródłowy (zostanie zrobiona kopia zapasowa)">
+                                ⚠ Nadpisz plik oryginalny
+                            </button>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 align-items-center mt-1" style="width: 100%; max-width: 500px;">
+                            <button id="rotateLeftBtn" class="btn btn-outline-secondary" type="button" title="Obróć o -90°">
+                                ↺ Obróć -90°
+                            </button>
+                            <button id="rotateRightBtn" class="btn btn-outline-secondary" type="button" title="Obróć o +90°">
+                                ↻ Obróć +90°
+                            </button>
+                            <span class="text-muted small">Obrót o 90° bez zmiany rozdzielczości.</span>
+                        </div>
+
+                        <!-- Sekcja prostowania obrazu (v7-Deskew) - oddzielona od przycisków -->
+                        <div class="d-flex flex-column gap-2 mt-2" style="width: 100%; max-width: 500px;">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button id="deskewBtn" class="btn btn-outline-info" type="button" title="Automatyczne prostowanie przekrzywionego obrazu">
+                                        🔄 Prostuj automatycznie
+                                    </button>
+                                    <button id="deskewManualBtn" class="btn btn-outline-warning" type="button" title="Ręczne prostowanie z wybranym kątem">
+                                        🎚️ Prostuj ręcznie
+                                    </button>
+                                </div>
+                                <div id="deskewManualControls" class="d-flex flex-column gap-2 hidden">
+                                    <label for="deskewAngleSlider" class="form-label mb-0">
+                                        Kąt obrotu: <strong id="deskewAngleValue">0.0</strong>°
+                                    </label>
+                                    <input type="range" class="form-range" id="deskewAngleSlider"
+                                           min="-10" max="10" step="0.1" value="0">
+                                    <div class="d-flex gap-2">
+                                        <button id="deskewApplyBtn" class="btn btn-sm btn-success" type="button">
+                                            ✓ Zastosuj kąt
+                                        </button>
+                                        <button id="deskewCancelBtn" class="btn btn-sm btn-secondary" type="button">
+                                            ✗ Anuluj
+                                        </button>
+                                    </div>
+                                </div>
+                        </div>
+
+                        <p id="cropInstructions" class="crop-instructions hidden">
+                            <span id="cropInstructionText">Wybierz tryb kadrowania, by rozpocząć.</span>
+                        </p>
+                    </div>
+
+                    <div class="crop-canvases-row">
+                        <div class="crop-pane">
+                            <h4 class="pane-heading">Obszar kadrowania</h4>
+                            <div class="crop-canvas-wrapper" style="position: relative;">
+                                <!-- Left vertical ruler: 30x600 -->
+                                <canvas id="cropRulerLeft" width="30" height="600"
+                                        style="position: absolute; top: 0; left: 0; background: #f8f9fa; border-right: 1px solid #dee2e6; z-index: 10;"></canvas>
+
+                                <!-- Right vertical ruler: 30x600 -->
+                                <canvas id="cropRulerRight" width="30" height="600"
+                                        style="position: absolute; top: 0; right: 0; background: #f8f9fa; border-left: 1px solid #dee2e6; z-index: 10;"></canvas>
+
+                                <!-- Canvas główny z offsetem dla linijek -->
+                                <canvas id="cropCanvas" width="800" height="600"
+                                        style="position: absolute; top: 0; left: 30px;"
+                                        aria-label="Obszar roboczy kadrowania"></canvas>
+                                <div id="cropOverlay" class="crop-overlay"
+                                     style="position: absolute; top: 0; left: 30px;"
+                                     aria-hidden="true"></div>
+                            </div>
+                        </div>
+                        <div class="crop-pane">
+                            <h4 class="pane-heading">Podgląd i parametry</h4>
+                            <div class="d-flex flex-column gap-3">
+                                <div id="croppedPreview" class="cropped-preview">
+                                    <p class="text-muted mb-0">Brak podglądu — zaznacz fragment schematu.</p>
+                                </div>
+                                <div id="cropStats" class="crop-stats hidden">
+                                    <dl class="stats-list mb-0">
+                                        <dt>Wymiary:</dt>
+                                        <dd id="cropDimensions">--</dd>
+                                        <dt>Rozmiar:</dt>
+                                        <dd id="cropSize">--</dd>
+                                        <dt>Proporcje:</dt>
+                                        <dd id="cropAspectRatio">--</dd>
+                                        <dt>Jakość:</dt>
+                                        <dd id="cropQuality">--</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="image-processing" aria-label="Binaryzacja obrazu">
+                <article class="surface-card" aria-labelledby="processingHeading">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <h3 id="processingHeading" class="h5 mb-0">Binaryzacja obrazu</h3>
+                            <select id="processingHistorySelect" class="form-select form-select-sm processing-select" aria-label="Wybierz zapisany fragment" disabled>
+                                <option value="">Brak zapisanych fragmentów</option>
+                            </select>
+                            <button id="processingLoadPageBtn" class="btn btn-outline-success" type="button">Załaduj bieżącą stronę PDF</button>
+                            <button id="processingSavePageBtn" class="btn btn-outline-primary" type="button" disabled>Zapisz stronę do historii</button>
+                            <button id="processingLoadFileBtn" class="btn btn-outline-success" type="button">Wczytaj zapisany fragment</button>
+                            <input id="processingLoadFileInput" type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" aria-hidden="true">
+                        </div>
+
+                        <div class="processing-grid">
+                            <div class="processing-pane">
+                                <h4 class="pane-heading">Oryginalny fragment</h4>
+                                <div class="processing-stage" aria-live="polite">
+                                    <img id="processingOriginalImage" alt="Oryginalny fragment schematu" class="hidden">
+                                    <p id="processingOriginalPlaceholder" class="processing-placeholder">Brak obrazu — zapisz fragment w zakładce „Kadrowanie” lub wczytaj stronę PDF.</p>
+                                </div>
+                            </div>
+                            <div class="processing-pane">
+                                <h4 class="pane-heading">Podgląd po binaryzacji</h4>
+                                <div class="processing-stage" aria-live="polite">
+                                    <img id="processingResultImage" alt="Wynik binaryzacji obrazu" class="hidden">
+                                    <p id="processingResultPlaceholder" class="processing-placeholder">Wynik pojawi się po zastosowaniu binaryzacji.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="processing-actions">
+                            <div class="processing-filter-controls">
+                                <div class="mb-3">
+                                    <label for="processingFilterSelect" class="form-label mb-1">Rodzaj filtra</label>
+                                    <select id="processingFilterSelect" class="form-select form-select-sm processing-select" aria-label="Wybierz rodzaj filtra">
+                                        <option value="manual" selected>Próg ręczny</option>
+                                        <option value="adaptive-mean">Adaptacyjny (średnia)</option>
+                                        <option value="otsu">Otsu</option>
+                                    </select>
+                                </div>
+                                <div id="processingManualControls" class="processing-filter-group">
+                                    <label for="processingThresholdSlider" class="form-label mb-1">Próg (0–255)</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input id="processingThresholdSlider" type="range" min="0" max="255" value="128" class="form-range" aria-describedby="processingThresholdValue">
+                                        <span id="processingThresholdValue" class="fw-semibold">128</span>
+                                    </div>
+                                </div>
+                                <div id="processingAdaptiveControls" class="processing-filter-group hidden">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-6">
+                                            <label for="processingAdaptiveWindow" class="form-label mb-1">Rozmiar okna</label>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input id="processingAdaptiveWindow" type="range" min="3" max="41" step="2" value="15" class="form-range" aria-describedby="processingAdaptiveWindowValue">
+                                                <span id="processingAdaptiveWindowValue" class="fw-semibold">15 px</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="processingAdaptiveOffset" class="form-label mb-1">Korekta progu</label>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input id="processingAdaptiveOffset" type="range" min="-50" max="50" step="1" value="5" class="form-range" aria-describedby="processingAdaptiveOffsetValue">
+                                                <span id="processingAdaptiveOffsetValue" class="fw-semibold">5</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mb-0">Próg lokalny = średnia w oknie − korekta.</p>
+                                </div>
+                                <div id="processingOtsuInfo" class="processing-filter-group hidden">
+                                    <p class="text-muted small mb-0">Metoda Otsu automatycznie dobiera próg na podstawie histogramu jasności.</p>
+                                </div>
+                            </div>
+                            <button id="processingApplyBtn" class="btn btn-success" type="button">Zastosuj filtr wstępny</button>
+                            <button id="processingResetBtn" class="btn btn-outline-secondary" type="button" disabled>Wyczyść podgląd</button>
+                            <button id="processingSaveResultBtn" class="btn btn-outline-success" type="button" disabled>Zapisz wynik do historii</button>
+                            <button id="processingDownloadBtn" class="btn btn-outline-primary" type="button" disabled>Pobierz wynik</button>
+                            <button id="processingSendToRetouchBtn" class="btn btn-outline-success" type="button" disabled>Prześlij do retuszu</button>
+                            <div class="processing-toolbar" role="group" aria-label="Powiększenie podglądu">
+                                <button id="processingZoomOutBtn" class="btn btn-outline-success btn-sm" type="button" title="Zmniejsz">-</button>
+                                <span id="processingZoomLabel" class="fw-semibold">100%</span>
+                                <button id="processingZoomInBtn" class="btn btn-outline-success btn-sm" type="button" title="Powiększ">+</button>
+                                <button id="processingZoomResetBtn" class="btn btn-outline-success btn-sm" type="button" title="Reset">Reset</button>
+                            </div>
+                            <p id="processingStatus" class="processing-status">Wybierz fragment, aby rozpocząć obróbkę.</p>
+                        </div>
+
+                        <div class="processing-history">
+                            <div class="processing-history-header">
+                                <h4 class="pane-heading mb-0">Historia fragmentów</h4>
+                                <button id="processingHistoryClearBtn" class="btn btn-outline-danger btn-sm" type="button" disabled>Wyczyść historię</button>
+                            </div>
+                            <ul id="processingHistoryList" class="processing-history-list">
+                                <li class="processing-history-empty">Brak zapisanych fragmentów.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="manual-retouch" aria-label="Automatyczny retusz">
+                <article class="surface-card" aria-labelledby="retouchHeading">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <h3 id="retouchHeading" class="h5 mb-0">Automatyczny retusz</h3>
+                            <p class="text-muted mb-0">Zastosuj automatyczne filtry czyszczenia, porównując oryginał i efekt końcowy.</p>
+                        </div>
+
+                        <div class="retouch-actions">
+                            <button id="retouchLoadBufferBtn" class="btn btn-outline-success btn-sm" type="button">Załaduj wynik z binaryzacji</button>
+                            <button id="retouchLoadDiskBtn" class="btn btn-outline-primary btn-sm" type="button">Wczytaj z dysku</button>
+                            <button id="retouchClearBtn" class="btn btn-outline-secondary btn-sm" type="button">Wyczyść</button>
+                            <input id="retouchLoadFileInput" type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" aria-hidden="true">
+                        </div>
+
+                        <div class="processing-filter-controls">
+                            <div class="mb-3">
+                                <label for="retouchAutoFilterSelect" class="form-label mb-1">Filtry automatyczne czyszczenia</label>
+                                <select id="retouchAutoFilterSelect" class="form-select form-select-sm processing-select" aria-label="Wybierz automatyczny filtr czyszczenia">
+                                    <option value="">-- Wybierz filtr --</option>
+                                    <option value="remove-small">Usuń małe obiekty</option>
+                                    <option value="morphology-open">Morfologia: Opening (usuwa szumy)</option>
+                                    <option value="morphology-close">Morfologia: Closing (wypełnia dziury)</option>
+                                    <option value="median">Filtr medianowy (wygładza)</option>
+                                    <option value="denoise">Zaawansowane usuwanie szumów</option>
+                                </select>
+                            </div>
+
+                            <!-- Kontrolki dla: Usuń małe obiekty -->
+                            <div id="retouchRemoveSmallControls" class="processing-filter-group hidden">
+                                <label for="retouchRemoveSmallSlider" class="form-label mb-1">Minimalny rozmiar obiektu (px)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input id="retouchRemoveSmallSlider" type="range" min="10" max="500" value="100" step="10" class="form-range" aria-describedby="retouchRemoveSmallValue">
+                                    <span id="retouchRemoveSmallValue" class="fw-semibold">100 px</span>
+                                </div>
+                                <p class="text-muted small mb-0">Obiekty mniejsze niż ta wartość zostaną usunięte (np. izolowane piksele szumu).</p>
+                            </div>
+
+                            <!-- Kontrolki dla: Morfologia Opening -->
+                            <div id="retouchMorphOpenControls" class="processing-filter-group hidden">
+                                <label for="retouchMorphOpenSlider" class="form-label mb-1">Rozmiar kernela (px)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input id="retouchMorphOpenSlider" type="range" min="1" max="15" value="3" step="2" class="form-range" aria-describedby="retouchMorphOpenValue">
+                                    <span id="retouchMorphOpenValue" class="fw-semibold">3 px</span>
+                                </div>
+                                <p class="text-muted small mb-0">Większy kernel = usuwa większe szumy, ale może usunąć cienkie linie.</p>
+                            </div>
+
+                            <!-- Kontrolki dla: Morfologia Closing -->
+                            <div id="retouchMorphCloseControls" class="processing-filter-group hidden">
+                                <label for="retouchMorphCloseSlider" class="form-label mb-1">Rozmiar kernela (px)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input id="retouchMorphCloseSlider" type="range" min="1" max="15" value="3" step="2" class="form-range" aria-describedby="retouchMorphCloseValue">
+                                    <span id="retouchMorphCloseValue" class="fw-semibold">3 px</span>
+                                </div>
+                                <p class="text-muted small mb-0">Większy kernel = wypełnia większe przerwy, ale może zatrzeć małe detale.</p>
+                            </div>
+
+                            <!-- Kontrolki dla: Filtr medianowy -->
+                            <div id="retouchMedianControls" class="processing-filter-group hidden">
+                                <label for="retouchMedianSlider" class="form-label mb-1">Rozmiar okna (px)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input id="retouchMedianSlider" type="range" min="3" max="21" value="5" step="2" class="form-range" aria-describedby="retouchMedianValue">
+                                    <span id="retouchMedianValue" class="fw-semibold">5 px</span>
+                                </div>
+                                <p class="text-muted small mb-0">Większe okno = silniejsze wygładzanie, ale może rozmyć krawędzie.</p>
+                            </div>
+
+                            <!-- Kontrolki dla: Zaawansowane usuwanie szumów -->
+                            <div id="retouchDenoiseControls" class="processing-filter-group hidden">
+                                <label for="retouchDenoiseSlider" class="form-label mb-1">Siła usuwania szumów (h)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input id="retouchDenoiseSlider" type="range" min="3" max="30" value="10" step="1" class="form-range" aria-describedby="retouchDenoiseValue">
+                                    <span id="retouchDenoiseValue" class="fw-semibold">10</span>
+                                </div>
+                                <p class="text-muted small mb-0">Większa wartość = silniejsze usuwanie szumów (ale może rozmyć szczegóły).</p>
+                            </div>
+
+                            <button id="retouchApplyAutoFilterBtn" class="btn btn-success btn-sm" type="button">Zastosuj automatyczne czyszczenie</button>
+                            <button id="retouchUndoBtn" class="btn btn-outline-warning btn-sm" type="button" disabled>↶ Cofnij do oryginału</button>
+                            <button id="retouchDownloadBtn" class="btn btn-outline-primary btn-sm" type="button" disabled>Pobierz wynik</button>
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="retouchStoreHistory">
+                                <label class="form-check-label" for="retouchStoreHistory">Zapisz wynik w historii</label>
+                            </div>
+                            <button id="retouchSaveHistoryBtn" class="btn btn-outline-success btn-sm" type="button" disabled>Zapisz wynik</button>
+                        </div>
+
+                        <p id="retouchStatus" class="processing-status">Wczytaj materiał do retuszu.</p>
+
+                        <div class="retouch-grid">
+                            <div class="retouch-pane">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h4 class="pane-heading mb-0">Fragment do retuszu</h4>
+                                    <div class="processing-toolbar" role="group" aria-label="Zoom fragmentu źródłowego">
+                                        <button id="retouchSourceZoomOutBtn" class="btn btn-outline-success btn-sm" type="button">-</button>
+                                        <span id="retouchSourceZoomLabel" class="fw-semibold">100%</span>
+                                        <button id="retouchSourceZoomInBtn" class="btn btn-outline-success btn-sm" type="button">+</button>
+                                        <button id="retouchSourceZoomResetBtn" class="btn btn-outline-success btn-sm" type="button">Reset</button>
+                                    </div>
+                                </div>
+                                <div class="retouch-stage" id="retouchSourceStage" aria-live="polite">
+                                    <img id="retouchSourceImage" alt="Fragment przeznaczony do retuszu" class="retouch-image hidden">
+                                    <p id="retouchSourcePlaceholder" class="retouch-placeholder mb-0">Wybierz fragment w zakładce „Kadrowanie” albo wczytaj obraz, aby rozpocząć retusz.</p>
+                                </div>
+                            </div>
+                            <div class="retouch-pane">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h4 class="pane-heading mb-0">Fragment po zretuszowaniu</h4>
+                                    <div class="processing-toolbar" role="group" aria-label="Zoom fragmentu wynikowego">
+                                        <button id="retouchResultZoomOutBtn" class="btn btn-outline-success btn-sm" type="button">-</button>
+                                        <span id="retouchResultZoomLabel" class="fw-semibold">100%</span>
+                                        <button id="retouchResultZoomInBtn" class="btn btn-outline-success btn-sm" type="button">+</button>
+                                        <button id="retouchResultZoomResetBtn" class="btn btn-outline-success btn-sm" type="button">Reset</button>
+                                    </div>
+                                </div>
+                                <div class="retouch-stage" id="retouchResultStage" aria-live="polite">
+                                    <img id="retouchResultImage" alt="Podgląd efektu retuszu" class="retouch-image hidden">
+                                    <p id="retouchResultPlaceholder" class="retouch-placeholder mb-0">Efekt retuszu pojawi się w tym miejscu.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="canvas-retouch" aria-label="Narzędzia retuszu">
+                <article class="surface-card" aria-labelledby="canvasRetouchHeading">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <h3 id="canvasRetouchHeading" class="h5 mb-0">Narzędzia retuszu (Canvas)</h3>
+                            <p class="text-muted mb-0">Edycja pikseli: dorysuj przerwane linie, usuń artefakty ręcznie.
+                                <span class="badge bg-info">Obraz automatycznie odwracany: czarne tło + białe linie</span>
+                            </p>
+                        </div>
+
+                        <!-- Toolbar narzędzi canvas -->
+                        <div class="canvas-tools-toolbar d-flex flex-wrap align-items-center gap-2">
+                            <!-- Przełącznik trybu -->
+                            <button id="canvasModeToggleBtn" class="btn btn-sm btn-outline-info" type="button" title="Przełącz między trybem binarnym (tylko czarny/biały) a skalą szarości (0-255)">
+                                🎨 Tryb: <span id="canvasModeLabel">Binarny</span>
+                            </button>
+
+                            <div class="border-start ps-2 ms-2"></div>
+
+                            <!-- Narzędzia binarne -->
+                            <button id="canvasWhiteBrushBtn" class="btn btn-sm btn-outline-success active" type="button" title="Dorysuj białe linie schematu">
+                                🖌️ Pędzel biały
+                            </button>
+                            <button id="canvasBlackBrushBtn" class="btn btn-sm btn-outline-dark" type="button" title="Usuń białe szumy (rysuj czarnym)">
+                                ⬛ Pędzel czarny
+                            </button>
+                            <button id="canvasGrayBrushBtn" class="btn btn-sm btn-outline-secondary" type="button" title="Rysuj odcieniem szarości (0-255)" style="display: none;">
+                                🌫️ Pędzel szary
+                            </button>
+                            <button id="canvasEraserBtn" class="btn btn-sm btn-outline-secondary" type="button" title="Smart Gumka - kliknij aby pobrać kolor tła, następnie maluj nim">
+                                🧹 Gumka
+                            </button>
+
+                            <!-- Suwak rozmiaru pędzla -->
+                            <div class="d-flex align-items-center gap-2 border-start ps-2 ms-2">
+                                <label for="canvasBrushSizeSlider" class="form-label mb-0">Rozmiar:</label>
+                                <input id="canvasBrushSizeSlider" type="range" min="1" max="50" value="10" class="form-range" style="width: 120px;" aria-describedby="canvasBrushSizeValue">
+                                <span id="canvasBrushSizeValue" class="fw-semibold">10 px</span>
+                            </div>
+
+                            <!-- Suwak odcienia szarości (tylko dla gray-brush) -->
+                            <div id="canvasGrayControls" class="d-flex align-items-center gap-2 border-start ps-2 ms-2" style="display: none;">
+                                <label for="canvasGraySlider" class="form-label mb-0">Odcień:</label>
+                                <input id="canvasGraySlider" type="range" min="0" max="255" value="128" class="form-range" style="width: 140px;" aria-describedby="canvasGrayValue">
+                                <span id="canvasGrayValue" class="fw-semibold">128</span>
+                                <div id="canvasGrayPreview" style="width: 24px; height: 24px; border: 1px solid #666; background: #808080; border-radius: 3px;" title="Podgląd koloru"></div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2 border-start ps-2 ms-2">
+                                <button id="canvasUndoBtn" class="btn btn-sm btn-outline-warning" type="button" disabled title="Cofnij ostatnią zmianę">
+                                    ↶ Cofnij
+                                </button>
+                                <button id="canvasRedoBtn" class="btn btn-sm btn-outline-warning" type="button" disabled title="Ponów cofniętą zmianę">
+                                    ↷ Ponów
+                                </button>
+                            </div>
+
+                            <button id="canvasBinarizeBtn" class="btn btn-sm btn-outline-warning" type="button" disabled title="⚠️ UWAGA: Binaryzacja może pogorszyć jakość obrazu! Usuwa szczegóły i degraduje cienkie linie. Dla segmentacji AI lepszy jest oryginalny obraz w odcieniach szarości.">
+                                ⚠️ ⚫⚪ Binaryzuj
+                            </button>
+                            <button id="canvasInvertBtn" class="btn btn-sm btn-outline-info" type="button" title="Odwróć kolory całego obrazu">
+                                🔄 Odwróć kolory
+                            </button>
+                        </div>
+
+                        <!-- Akcje ładowania/zapisywania -->
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <button id="canvasLoadFromCropBtn" class="btn btn-sm btn-outline-info" type="button" title="Załaduj czysty wycinek bezpośrednio z kadrowania (pomija obróbkę)">
+                                ✂️ Załaduj z kadrowania
+                            </button>
+                            <button id="canvasLoadFromRetouchBtn" class="btn btn-sm btn-outline-success" type="button" title="Załaduj przetworzony obraz z zakładki Automatyczny retusz">
+                                📥 Załaduj z "Automatyczny retusz"
+                            </button>
+                            <button id="canvasLoadFileBtn" class="btn btn-sm btn-outline-primary" type="button">
+                                📂 Wczytaj z dysku
+                            </button>
+                            <input id="canvasLoadFileInput" type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden" aria-hidden="true">
+                            <button id="canvasResetBtn" class="btn btn-sm btn-outline-secondary" type="button" disabled>
+                                ↺ Resetuj do oryginału
+                            </button>
+                            <button id="canvasDownloadBtn" class="btn btn-sm btn-outline-primary" type="button" disabled>
+                                💾 Pobierz wynik
+                            </button>
+                            <button id="canvasClearBtn" class="btn btn-sm btn-outline-danger" type="button">
+                                🗑️ Wyczyść
+                            </button>
+                        </div>
+
+                        <p id="canvasRetouchStatus" class="processing-status mb-0">Wczytaj obraz do edycji canvas.</p>
+
+                        <!-- Dwa panele 50/50 -->
+                        <div class="retouch-grid">
+                            <!-- Lewy: Oryginalny fragment (read-only + zoom) -->
+                            <div class="retouch-pane">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h4 class="pane-heading mb-0">Oryginalny fragment</h4>
+                                    <div class="processing-toolbar" role="group" aria-label="Zoom oryginału">
+                                        <button id="canvasSourceZoomOutBtn" class="btn btn-outline-success btn-sm" type="button">-</button>
+                                        <span id="canvasSourceZoomLabel" class="fw-semibold">100%</span>
+                                        <button id="canvasSourceZoomInBtn" class="btn btn-outline-success btn-sm" type="button">+</button>
+                                        <button id="canvasSourceZoomResetBtn" class="btn btn-outline-success btn-sm" type="button">Reset</button>
+                                    </div>
+                                </div>
+                                <div class="retouch-stage" id="canvasSourceStage" aria-live="polite" style="overflow: auto; max-height: 600px;">
+                                    <img id="canvasSourceImage" alt="Oryginalny fragment (tylko podgląd)" class="retouch-image hidden">
+                                    <p id="canvasSourcePlaceholder" class="retouch-placeholder mb-0">Oryginalny obraz pojawi się tutaj.</p>
+                                </div>
+                            </div>
+
+                            <!-- Prawy: Canvas roboczy (edycja + zoom + pan) -->
+                            <div class="retouch-pane">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h4 class="pane-heading mb-0">Canvas roboczy (edycja)</h4>
+                                    <div class="processing-toolbar" role="group" aria-label="Zoom canvas">
+                                        <button id="canvasEditorZoomOutBtn" class="btn btn-outline-success btn-sm" type="button">-</button>
+                                        <span id="canvasEditorZoomLabel" class="fw-semibold">100%</span>
+                                        <button id="canvasEditorZoomInBtn" class="btn btn-outline-success btn-sm" type="button">+</button>
+                                        <button id="canvasEditorZoomResetBtn" class="btn btn-outline-success btn-sm" type="button">Reset</button>
+                                    </div>
+                                </div>
+                                <div class="retouch-stage" id="canvasEditorStage" aria-live="polite" style="overflow: auto; max-height: 600px;">
+                                    <div style="display: inline-block; position: relative;">
+                                        <canvas id="canvasRetouchEditor" width="800" height="600" class="hidden" style="display: block; border: 1px solid #ddd; background: #000; cursor: crosshair;"></canvas>
+                                    </div>
+                                    <p id="canvasEditorPlaceholder" class="retouch-placeholder mb-0">Canvas roboczy pojawi się po załadowaniu obrazu.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="edge-connectors" aria-label="Łączenie schematów">
+                <div class="workspace-stack symbol-detection-stack">
+                    <article class="surface-card" aria-labelledby="edgeConnectorIntroHeading">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <h3 id="edgeConnectorIntroHeading" class="h5 mb-1">Łączenie schematów</h3>
+                                <p class="text-muted mb-0">Oznacz konektory na krawędziach stron, aby netlista i diagnostyka wiedziały, jak przechodzą sygnały między arkuszami.</p>
+                            </div>
+                            <span id="edgeConnectorStatus" class="status-pill">Oczekiwanie na dane</span>
+                        </div>
+                        <div class="row g-3 mt-3">
+                            <div class="col-sm-4">
+                                <small class="text-muted d-block">Bieżący schemat</small>
+                                <div id="edgeConnectorPdfInfo" class="fw-semibold">Brak pliku</div>
+                            </div>
+                            <div class="col-sm-4">
+                                <small class="text-muted d-block">Strona robocza</small>
+                                <div id="edgeConnectorPageInfo" class="fw-semibold">-</div>
+                            </div>
+                            <div class="col-sm-4">
+                                <small class="text-muted d-block">Tryb edycji</small>
+                                <div id="edgeConnectorSelectionInfo" class="fw-semibold">Nowy konektor</div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button id="edgeConnectorUsePdfBtn" class="btn btn-outline-success btn-sm" type="button" disabled>Przepisz bieżącą stronę</button>
+                        </div>
+                    </article>
+
+                    <article class="surface-card" aria-labelledby="edgeConnectorFormHeading">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <h3 id="edgeConnectorFormHeading" class="h5 mb-0">Dodaj lub edytuj konektor</h3>
+                            <small class="text-muted">Identyfikator ma format A05 / B12 / C03 / D08</small>
+                        </div>
+                        <form id="edgeConnectorForm" class="row g-3" novalidate>
+                            <div class="col-sm-4">
+                                <label for="edgeConnectorEdgeId" class="form-label">Identyfikator krawędzi *</label>
+                                <input id="edgeConnectorEdgeId" class="form-control" type="text" inputmode="text" placeholder="np. A05" maxlength="3" required>
+                            </div>
+                            <div class="col-sm-4">
+                                <label for="edgeConnectorPage" class="form-label">Strona *</label>
+                                <input id="edgeConnectorPage" class="form-control" type="number" min="1" max="999" placeholder="np. 3" required>
+                            </div>
+                            <div class="col-sm-4">
+                                <label for="edgeConnectorLabel" class="form-label">Etykieta</label>
+                                <input id="edgeConnectorLabel" class="form-control" type="text" placeholder="np. Zasilanie sekcji B">
+                            </div>
+                            <div class="col-sm-4">
+                                <label for="edgeConnectorNetName" class="form-label">Nazwa sieci</label>
+                                <input id="edgeConnectorNetName" class="form-control" type="text" placeholder="np. VCC_B">
+                            </div>
+                            <div class="col-sm-4">
+                                <label for="edgeConnectorSheetId" class="form-label">Identyfikator arkusza</label>
+                                <input id="edgeConnectorSheetId" class="form-control" type="text" placeholder="np. sheet-02">
+                            </div>
+                            <div class="col-sm-4">
+                                <label for="edgeConnectorHistoryId" class="form-label">History ID</label>
+                                <input id="edgeConnectorHistoryId" class="form-control" type="text" placeholder="automatycznie z historii">
+                            </div>
+                            <div class="col-12">
+                                <label for="edgeConnectorNote" class="form-label">Notatka</label>
+                                <input id="edgeConnectorNote" class="form-control" type="text" placeholder="np. przejście do wzmacniacza">
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <label for="edgeConnectorGeometry" class="form-label mb-0">Geometria (JSON)</label>
+                                    <button id="edgeConnectorGeometryTemplateBtn" class="btn btn-link btn-sm" type="button">Wstaw szablon</button>
+                                </div>
+                                <textarea id="edgeConnectorGeometry" class="form-control" rows="4" spellcheck="false" placeholder='{"type":"polygon","points":[[0,0],[120,0],[120,30],[0,30]]}'></textarea>
+                                <div class="form-text">Podaj obiekt z kluczem <code>type</code> oraz tablicą <code>points</code> (piksele w układzie PDF).</div>
+                            </div>
+                            <div class="col-12 d-flex flex-wrap gap-2">
+                                <button id="edgeConnectorSaveBtn" class="btn btn-success" type="submit">Zapisz konektor</button>
+                                <button id="edgeConnectorResetBtn" class="btn btn-outline-secondary" type="button">Wyczyść formularz</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <article class="surface-card" aria-labelledby="edgeConnectorPreviewHeading">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <div>
+                                <h3 id="edgeConnectorPreviewHeading" class="h5 mb-1">Podgląd konektora</h3>
+                                <p class="text-muted mb-0">Podgląd geometrii z formularza, wybranego wpisu lub wykryty przez backend/ML.</p>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button id="edgeConnectorPreviewLoadBtn" class="btn btn-outline-success btn-sm" type="button">Załaduj wykryte z backendu</button>
+                                <button id="edgeConnectorPreviewMockBtn" class="btn btn-outline-primary btn-sm" type="button">Pokaż przykładowy konektor</button>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <label for="edgeConnectorShrinkSlider" class="form-label mb-0 small">Zmniejsz ramkę</label>
+                            <input id="edgeConnectorShrinkSlider" type="range" class="form-range" min="0" max="0.15" step="0.01" value="0" style="max-width: 200px;">
+                            <span id="edgeConnectorShrinkValue" class="badge bg-light text-dark">0%</span>
+                        </div>
+                        <div class="p-2 border rounded bg-light" style="max-width: 520px;">
+                            <canvas id="edgeConnectorPreviewCanvas" width="500" height="320" style="width: 100%; height: auto; border: 1px solid #ddd; background: #f8f9fa;"></canvas>
+                            <p class="text-muted small mb-0 mt-2">Możesz podglądać geometrię z formularza, zapisanego wpisu lub z wyników detekcji backendu.</p>
+                        </div>
+                    </article>
+
+                    <article class="surface-card" aria-labelledby="edgeConnectorListHeading">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <h3 id="edgeConnectorListHeading" class="h5 mb-0">Zapisane konektory</h3>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-dark" id="edgeConnectorCount">0</span>
+                                <button id="edgeConnectorRefreshBtn" class="btn btn-outline-primary btn-sm" type="button">Odśwież</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive mt-3">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Id</th>
+                                        <th>Strona</th>
+                                        <th>Sieć</th>
+                                        <th>Etykieta</th>
+                                        <th>Aktualizacja</th>
+                                        <th class="text-end">Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="edgeConnectorListBody"></tbody>
+                            </table>
+                        </div>
+                        <p id="edgeConnectorListEmpty" class="text-muted mb-0">Brak zapisanych konektorów. Dodaj pierwszy, aby zachować mapowanie między arkuszami.</p>
+                    </article>
+
+                    <article class="surface-card" aria-labelledby="edgeConnectorDetailHeading">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <h3 id="edgeConnectorDetailHeading" class="h5 mb-1">Szczegóły konektora</h3>
+                                <p id="edgeConnectorDetailTitle" class="text-muted mb-0">Nie wybrano wpisu</p>
+                            </div>
+                            <button id="edgeConnectorCopyBtn" class="btn btn-outline-secondary btn-sm" type="button" disabled>Skopiuj JSON</button>
+                        </div>
+                        <pre id="edgeConnectorDetailJson" class="bg-light border rounded p-3 small text-break">Wybierz konektor z listy, aby zobaczyć szczegóły i wczytać go do formularza.</pre>
+                    </article>
+                </div>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="line-segmentation" aria-label="Segmentacja linii">
+                <article class="surface-card" aria-labelledby="lineSegHeading">
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <h3 id="lineSegHeading" class="h5 mb-0">Segmentacja linii</h3>
+                            <p class="text-muted mb-0">Uruchom wykrywanie linii i węzłów na ostatnim materiale z retuszu.</p>
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <button id="lineSegLoadRetouchBtn" class="btn btn-sm btn-outline-success" type="button">Załaduj z „Automatyczny retusz”</button>
+                            <button id="lineSegLoadToolsBtn" class="btn btn-sm btn-outline-primary" type="button">Załaduj z „Narzędzi retuszu”</button>
+                            <button id="lineSegLoadFileBtn" class="btn btn-sm btn-outline-secondary" type="button">Załaduj z dysku</button>
+                            <input id="lineSegLoadFileInput" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp">
+                            <button id="lineSegRunBtn" class="btn btn-sm btn-success" type="button" disabled>Wykryj linie</button>
+                            <button id="lineSegNetlistBtn" class="btn btn-sm btn-outline-success" type="button" disabled>Generuj netlistę</button>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="lineSegStoreHistory" checked>
+                                <label class="form-check-label" for="lineSegStoreHistory">Zapisz wynik w historii</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="lineSegDebug">
+                                <label class="form-check-label" for="lineSegDebug">Zachowaj pliki debug</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="lineSegBinary">
+                                <label class="form-check-label" for="lineSegBinary">Obraz jest binarny</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="lineSegUseConnectorRoi" disabled>
+                                <label class="form-check-label" for="lineSegUseConnectorRoi">Użyj ramki schematu (ROI)</label>
+                            </div>
+                            <span id="lineSegRoiStatus" class="text-muted small">Brak ramki schematu.</span>
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <label for="lineSegFixtureSelect" class="form-label mb-0">Próbka testowa:</label>
+                            <select id="lineSegFixtureSelect" class="form-select form-select-sm" style="max-width: 260px;">
+                                <option value="">Brak (wybierz, aby wczytać wzorzec)</option>
+                            </select>
+                            <button id="lineSegLoadFixtureBtn" class="btn btn-sm btn-outline-secondary" type="button">Załaduj próbkę</button>
+                            <span id="lineSegFixtureInfo" class="text-muted small">Brak wybranej próbki.</span>
+                        </div>
+
+                        <p id="lineSegStatus" class="processing-status">Wczytaj źródło segmentacji.</p>
+                        <p id="lineSegHistoryIdLabel" class="text-muted small mb-0">History ID: —</p>
+
+                        <div class="line-seg-layout">
+                            <div class="line-seg-column line-seg-column-primary">
+                                <div class="retouch-pane">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                        <h4 class="pane-heading mb-0">Fragment źródłowy</h4>
+                                        <div class="line-seg-source-controls">
+                                            <div class="processing-toolbar" role="group" aria-label="Zoom fragmentu źródłowego (segmentacja)">
+                                                <button id="lineSegZoomOutBtn" class="btn btn-outline-success btn-sm" type="button" title="Pomniejsz widok">-</button>
+                                                <span id="lineSegZoomLabel" class="fw-semibold">100%</span>
+                                                <button id="lineSegZoomInBtn" class="btn btn-outline-success btn-sm" type="button" title="Powiększ widok">+</button>
+                                                <button id="lineSegZoomResetBtn" class="btn btn-outline-success btn-sm" type="button" title="Wyzeruj powiększenie">Reset</button>
+                                            </div>
+                                            <div class="form-check form-switch form-switch-sm mb-0 line-seg-overlay-toggle">
+                                                <input class="form-check-input" type="checkbox" id="lineSegOverlayToggle" checked>
+                                                <label class="form-check-label" for="lineSegOverlayToggle">Podświetl węzły</label>
+                                            </div>
+                                            <div class="form-check form-switch form-switch-sm mb-0 line-seg-overlay-toggle">
+                                                <input class="form-check-input" type="checkbox" id="lineSegSymbolOverlayToggle">
+                                                <label class="form-check-label" for="lineSegSymbolOverlayToggle">Podświetl symbole</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="line-seg-controls-hint">Ctrl + kółko myszy = powiększenie &middot; Shift + przeciągnięcie = przesuwanie &middot; Środkowy przycisk = przesuwanie</p>
+                                    <div class="retouch-stage" id="lineSegSourceStage">
+                                        <div class="overlay-legend-panel">
+                                            <ul class="overlay-legend list-unstyled small mb-0">
+                                                <li><span class="legend-dot legend-essential"></span> Węzeł istotny (≥3)</li>
+                                                <li><span class="legend-dot legend-non-essential"></span> Węzeł nieistotny (2)</li>
+                                                <li><span class="legend-dot legend-endpoint"></span> Końcówka (1)</li>
+                                                <li><span class="legend-dot legend-isolated"></span> Izolowany</li>
+                                            </ul>
+                                        </div>
+                                        <canvas id="lineSegSymbolOverlay" class="retouch-overlay hidden" aria-hidden="true"></canvas>
+                                        <canvas id="lineSegOverlayCanvas" class="retouch-overlay hidden" aria-hidden="true"></canvas>
+                                        <img id="lineSegSourceImage" alt="Źródło segmentacji" class="retouch-image hidden">
+                                        <p id="lineSegSourcePlaceholder" class="retouch-placeholder mb-0">Brak materiału. Skorzystaj z jednego z przycisków ładowania źródła.</p>
+                                    </div>
+                                    <p id="lineSegSymbolStatus" class="text-muted small mb-0 mt-2">Brak detekcji symboli.</p>
+                                </div>
+
+                                <section class="line-seg-panel" aria-labelledby="lineSegNetlistHeading">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h4 id="lineSegNetlistHeading" class="h6 mb-0">Netlista</h4>
+                                            <span id="lineSegNetlistStatus" class="text-muted small">Brak danych.</span>
+                                        </div>
+                                        <button id="lineSegSpiceExportBtn" class="btn btn-sm btn-outline-primary" type="button" disabled>Eksportuj do SPICE</button>
+                                    </div>
+                                    <div class="processing-filter-group">
+                                        <dl class="stats-list mb-0">
+                                            <dt>Węzły:</dt>
+                                            <dd id="lineSegNetlistSummaryNodes">--</dd>
+                                            <dt>Przewody:</dt>
+                                            <dd id="lineSegNetlistSummaryEdges">--</dd>
+                                            <dt>Węzły istotne (3+):</dt>
+                                            <dd id="lineSegNetlistSummaryEssential">--</dd>
+                                            <dt>Węzły nieistotne (2):</dt>
+                                            <dd id="lineSegNetlistSummaryNonEssential">--</dd>
+                                            <dt>Końcówki (1):</dt>
+                                            <dd id="lineSegNetlistSummaryEndpoints">--</dd>
+                                            <dt>Składowe spójne:</dt>
+                                            <dd id="lineSegNetlistSummaryComponents">--</dd>
+                                            <dt>Cykl(e):</dt>
+                                            <dd id="lineSegNetlistSummaryCycles">--</dd>
+                                        </dl>
+                                        <div id="lineSegSymbolSection" class="mt-3 border-top pt-3">
+                                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                                <div>
+                                                    <h5 class="h6 mb-0">Symbole (YOLO / netlista)</h5>
+                                                    <span id="lineSegSymbolSummaryStatus" class="text-muted small">Brak dopasowanych symboli.</span>
+                                                </div>
+                                                <a id="lineSegSymbolHistoryLink" class="btn btn-link btn-sm hidden" href="#" target="_blank" rel="noopener noreferrer">Historia detekcji</a>
+                                            </div>
+                                            <div class="row row-cols-2 row-cols-md-4 g-3 text-muted small mb-3">
+                                                <div>
+                                                    <p class="text-uppercase mb-0">Liczba</p>
+                                                    <p id="lineSegSymbolCount" class="fs-6 fw-semibold text-dark mb-0">--</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-uppercase mb-0">Detektor</p>
+                                                    <p id="lineSegSymbolDetector" class="fs-6 fw-semibold text-dark mb-0">--</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-uppercase mb-0">Opóźnienie</p>
+                                                    <p id="lineSegSymbolLatency" class="fs-6 fw-semibold text-dark mb-0">--</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-uppercase mb-0">Znacznik czasu</p>
+                                                    <p id="lineSegSymbolCapturedAt" class="fs-6 fw-semibold text-dark mb-0">--</p>
+                                                </div>
+                                            </div>
+                                            <p id="lineSegSymbolEmpty" class="small text-muted">Brak symboli powiązanych z tą netlistą.</p>
+                                            <div id="lineSegSymbolTableWrapper" class="table-responsive small hidden">
+                                                <table class="table table-sm table-hover align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col" style="width: 3rem;">#</th>
+                                                            <th scope="col" style="width: 8rem;">Klasa</th>
+                                                            <th scope="col" style="width: 6rem;">Pewność</th>
+                                                            <th scope="col" style="width: 9rem;">BBox [px]</th>
+                                                            <th scope="col">Źródło</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="lineSegSymbolTableBody"></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div id="lineSegConnectorSection" class="mt-3 border-top pt-3">
+                                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                                <div>
+                                                    <h5 class="h6 mb-0">Konektory krawędzi</h5>
+                                                    <span id="lineSegConnectorStatus" class="text-muted small">Brak danych.</span>
+                                                </div>
+                                                <button id="lineSegConnectorRefreshBtn" class="btn btn-link btn-sm" type="button">Odśwież</button>
+                                            </div>
+                                            <p id="lineSegConnectorHint" class="small text-muted mb-2">Uzupełnij zakładkę „Łączenie schematów”, aby połączyć arkusze w netliście.</p>
+                                            <div id="lineSegConnectorTableWrapper" class="table-responsive small hidden">
+                                                <table class="table table-sm align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 5rem;">Id</th>
+                                                            <th style="width: 4rem;">Strona</th>
+                                                            <th style="width: 7rem;">Sieć</th>
+                                                            <th>Etykieta / notatka</th>
+                                                            <th style="width: 7rem;">Aktualizacja</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="lineSegConnectorTableBody"></tbody>
+                                                </table>
+                                            </div>
+                                            <p id="lineSegConnectorEmpty" class="small text-muted mb-0">Brak konektorów powiązanych z bieżącą netlistą.</p>
+                                        </div>
+                                    </div>
+                                    <pre id="lineSegNetlistPre" class="bg-light p-2 rounded" style="max-height: 240px; overflow: auto;">[]</pre>
+                                    <p id="lineSegSpiceStatus" class="small text-muted mb-2">Brak eksportu SPICE.</p>
+                                    <div id="lineSegComponentSummary" class="mb-2">
+                                        <p id="lineSegComponentEmpty" class="small text-muted">Brak przypisań komponentów dla eksportu SPICE.</p>
+                                        <div id="lineSegComponentTableWrapper" class="table-responsive small hidden">
+                                            <table class="table table-sm table-striped align-middle mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col" style="width: 3rem;">#</th>
+                                                        <th scope="col" style="width: 5rem;">Typ</th>
+                                                        <th scope="col">Węzły</th>
+                                                        <th scope="col" style="width: 8rem;">Detekcja</th>
+                                                        <th scope="col" style="width: 5rem;">Pewność</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="lineSegComponentTableBody"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <a id="lineSegSpiceDownload" class="btn btn-link btn-sm hidden" href="#" target="_blank" rel="noopener noreferrer">Pobierz plik .cir</a>
+                                    </div>
+                                    <pre id="lineSegSpicePre" class="bg-light p-2 rounded" style="max-height: 200px; overflow: auto;">* Brak eksportu SPICE.</pre>
+                                </section>
+
+                                <section class="line-seg-panel" aria-labelledby="lineSegLogHeading">
+                                    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                        <h4 id="lineSegLogHeading" class="h6 mb-0">Log punktów</h4>
+                                        <div class="form-check form-switch form-switch-sm mb-0">
+                                            <input class="form-check-input" type="checkbox" id="lineSegLogToggle">
+                                            <label class="form-check-label" for="lineSegLogToggle">Rejestruj kliknięcia</label>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mb-1">Aktywuj rejestrację, kliknij w podgląd, a następnie – jeśli potrzeba – ustaw tag i notatkę dla zapisanego punktu.</p>
+                                    <div id="lineSegLogFeedback" class="small text-success visually-hidden">Zapisano punkt.</div>
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <label for="lineSegLogCategory" class="form-label mb-0 small">Tag:</label>
+                                        <select id="lineSegLogCategory" class="form-select form-select-sm" style="max-width: 200px;">
+                                            <option value="false_endpoint" selected>Fałszywa końcówka</option>
+                                            <option value="text">Tekst / opis</option>
+                                            <option value="junction">Węzeł poprawny</option>
+                                            <option value="noise">Szum / artefakt</option>
+                                            <option value="">Brak</option>
+                                        </select>
+                                        <label for="lineSegLogNote" class="form-label mb-0 small">Notatka:</label>
+                                        <input id="lineSegLogNote" type="text" class="form-control form-control-sm" placeholder="np. numer strony, komentarz" style="min-width: 200px; flex: 1 1 180px;">
+                                    </div>
+                                    <ul id="lineSegLogList" class="line-seg-log-list">
+                                        <li class="text-muted small">Brak zarejestrowanych punktów.</li>
+                                    </ul>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button id="lineSegLogCopyBtn" class="btn btn-sm btn-outline-secondary" type="button" disabled>Kopiuj JSON</button>
+                                        <button id="lineSegLogClearBtn" class="btn btn-sm btn-outline-danger" type="button" disabled>Wyczyść log</button>
+                                    </div>
+                                    <pre id="lineSegLogExport" class="bg-light p-2 rounded mt-2 small" style="max-height: 200px; overflow: auto;">[]</pre>
+                                </section>
+
+                                <section class="line-seg-panel" aria-labelledby="lineSegSummaryHeading">
+                                    <h4 id="lineSegSummaryHeading" class="h6 mb-0">Wynik</h4>
+                                    <div class="processing-filter-group">
+                                        <dl class="stats-list mb-0">
+                                            <dt>Odcinki:</dt>
+                                            <dd id="lineSegSummaryLines">--</dd>
+                                            <dt>Węzły:</dt>
+                                            <dd id="lineSegSummaryNodes">--</dd>
+                                            <dt>Czas:</dt>
+                                            <dd id="lineSegSummaryTime">--</dd>
+                                            <dt>Rozdzielczość:</dt>
+                                            <dd id="lineSegSummaryShape">--</dd>
+                                            <dt>Piksele binarne:</dt>
+                                            <dd id="lineSegSummaryBinary">--</dd>
+                                            <dt>Piksele szkieletu:</dt>
+                                            <dd id="lineSegSummarySkeleton">--</dd>
+                                            <dt>Flagowane:</dt>
+                                            <dd id="lineSegSummaryFlagged">--</dd>
+                                        </dl>
+                                    </div>
+                                </section>
+
+
+                            </div>
+
+                                <!-- Netlista przeniesiona do góry (fragment źródłowy) -->
+
+                                <section class="line-seg-panel" aria-labelledby="lineSegDebugHeading">
+                                    <h4 id="lineSegDebugHeading" class="h6">Debug</h4>
+                                    <ul id="lineSegDebugList" class="processing-history-list">
+                                        <li class="processing-history-empty">Brak plików debug.</li>
+                                    </ul>
+                                </section>
+
+                                <section class="line-seg-panel" aria-labelledby="lineSegDetailsHeading">
+                                    <h4 id="lineSegDetailsHeading" class="h6">Szczegóły</h4>
+                                    <pre id="lineSegResultPre" class="bg-light p-2 rounded" style="max-height: 320px; overflow: auto;">{}</pre>
+                                </section>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+
+            <!-- Diagnostics panel -->
+            <section class="tab-panel" data-tab-panel="diagnostics" aria-labelledby="diagnosticChatHeading" id="diagnosticChatPanel" style="background:#f6fbf8; padding:1rem; border-radius:0.75rem;">
+                <div class="diagnostics-hero surface-card text-center" style="padding:2rem; background:#ffffff; color:#1f2937; border:1px solid rgba(0,0,0,0.08); box-shadow:0 6px 18px rgba(0,0,0,0.05); border-radius:0.5rem;">
+                    <h3 class="h5 mb-3">Diagnostyka sprzętu</h3>
+                    <p class="text-muted mb-3">Analizuj wykryte symbole i netlistę oraz sugeruj kroki pomiarowe i diagnostyczne.</p>
+                    <button id="diagnosticStartBigBtn" class="btn btn-primary btn-lg" type="button">Rozpocznij diagnostykę</button>
+                    <div class="mt-2">
+                        <span id="diagnosticChatStatus" class="text-muted small">Brak danych.</span>
+                    </div>
+                </div>
+
+                <!-- Diagnostics checklist -->
+                <div class="diagnostics-checklist mt-3 p-3" style="background:#ffffff; border:1px solid rgba(0,0,0,0.04); border-radius:0.5rem;">
+                    <h4 class="h6 mb-2">Sprawdź dane przed diagnostyką</h4>
+                    <ul class="list-unstyled mb-2">
+                        <li><input type="checkbox" id="checkbox-symbols" disabled> Wykryto symbole (<span id="labels-coverage-text">--</span>)</li>
+                        <li><input type="checkbox" id="checkbox-netlist" disabled> Wygenerowano netlistę</li>
+                        <li><input type="checkbox" id="checkbox-labels" disabled> Etykiety komponentów (R1, C2) (<span id="labels-coverage-pct">--%</span>)</li>
+                        <li><input type="checkbox" id="checkbox-values" disabled> Wartości komponentów (10kΩ) (<span id="values-coverage-pct">--%</span>)</li>
+                    </ul>
+                    <div class="d-flex align-items-center gap-2">
+                        <p class="mb-0"><strong>Status:</strong> <span id="diagnostics-readiness">Sprawdzanie...</span></p>
+                        <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+                          <button id="diagnosticEditBtn" class="btn btn-sm btn-outline-secondary" type="button">Edytuj etykiety/wartości</button>
+                          <button id="diagnosticStartBtn" class="btn btn-sm btn-primary" disabled>Rozpocznij diagnostykę</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit modal (hidden) -->
+                <div id="diagnosticEditModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+                  <div class="modal-content" style="background:#fff; padding:1rem; border-radius:0.5rem; width:520px; max-width:95%;">
+                    <h4 class="h6">Edytuj etykiety i wartości</h4>
+                    <p class="small text-muted">Wprowadź poprawki w formacie JSON: { "R1": {"label":"R1","value":"10kΩ"}, ... }</p>
+                    <textarea id="diagnosticEditTextarea" rows="8" class="form-control" placeholder='{"R1":{"label":"R1","value":"10kΩ"}}'></textarea>
+                    <div class="d-flex justify-content-end gap-2 mt-2">
+                      <button id="diagnosticEditCancel" class="btn btn-sm btn-outline-secondary">Anuluj</button>
+                      <button id="diagnosticEditSave" class="btn btn-sm btn-success">Zapisz poprawki</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="processing-filter-group mt-2">
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <h4 id="diagnosticChatHeading" class="h6 mb-0">Diagnostyka AI</h4>
+                            <button id="diagnosticStartChatBtn" class="btn btn-sm btn-outline-success" type="button">Rozpocznij czat diagnostyczny</button>
+                        </div>
+                        <!-- status duplicated above; keep for backward compatibility -->
+                    </div>
+
+                    <div id="diagnosticChatBox" class="processing-filter-group hidden mt-3">
+                        <div id="diagnosticChatLog" class="diagnostic-chat-log"></div>
+                        <textarea id="diagnosticChatInput" class="form-control form-control-sm" rows="2" placeholder="Zadaj pytanie o wskazany fragment"></textarea>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <button id="diagnosticChatSendBtn" class="btn btn-sm btn-success" type="button">Wyślij</button>
+                            <button id="diagnosticChatCloseBtn" class="btn btn-sm btn-outline-secondary" type="button">Zakończ</button>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2">Odcinki wymagające uwagi:</p>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <button id="diagnosticHighlightClearBtn" class="btn btn-sm btn-outline-secondary" type="button" disabled>Wyczyść podświetlenie</button>
+                        <div class="form-check form-switch form-switch-sm mb-0">
+                            <input class="form-check-input" type="checkbox" id="diagnosticHighlightIsolate" disabled>
+                            <label class="form-check-label small" for="diagnosticHighlightIsolate">Pokaż tylko wybrany</label>
+                        </div>
+                    </div>
+                    <ul id="diagnosticFlaggedList" class="diagnostic-flagged-list">
+                        <li class="text-muted small">Brak oznaczonych odcinków.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Nowa zakładka: Strefy ignorowane -->
+            <section class="tab-panel" data-tab-panel="ignore-zones" aria-label="Strefy ignorowane">
+                <div class="workspace-stack ignore-zones-stack">
+                    <article class="surface-card">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h3 class="h5 mb-0">Strefy ignorowane</h3>
+                            <div class="d-flex gap-2 align-items-center">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Tryb rysowania">
+                                    <button id="ignoreModeRect" class="btn btn-outline-secondary btn-sm active" type="button">Prostokąt</button>
+                                    <button id="ignoreModePoly" class="btn btn-outline-secondary btn-sm" type="button">Wielokąt</button>
+                                    <button id="ignoreModeBrush" class="btn btn-outline-secondary btn-sm" type="button">Pędzel</button>
+                                </div>
+                                <div class="input-group input-group-sm" style="width: 8rem;">
+                                    <span class="input-group-text">Rozmiar</span>
+                                    <input id="ignoreBrushSize" type="number" min="1" max="100" value="10" class="form-control form-control-sm">
+                                </div>
+                                <button id="ignoreSaveBtn" class="btn btn-sm btn-success" type="button">Zapisz</button>
+                                <button id="ignoreLoadBtn" class="btn btn-sm btn-outline-secondary" type="button">Wczytaj</button>
+                                <button id="ignoreUndoBtn" class="btn btn-sm btn-outline-warning" type="button" title="Cofnij ostatnią strefę (Ctrl+Z)">Cofnij</button>
+                                <button id="ignoreClearBtn" class="btn btn-sm btn-outline-danger" type="button">Wyczyść</button>
+                            </div>
+                        </div>
+
+                        <div class="border rounded-3 p-3 mb-3">
+                            <p class="text-muted small mb-2">Narysuj obszary, które mają być ignorowane przez detektory - np. loga, ramki, obszary tekstu, zakłócenia graficzne.</p>
+                            <div id="ignoreCanvasWrapper" class="symbol-source-thumb mb-2">
+                                <canvas id="ignoreCanvas" width="800" height="400" class="border bg-white" aria-label="Canvas do rysowania stref ignorowanych"></canvas>
+                                <p id="ignoreCanvasPlaceholder" class="symbol-thumb-placeholder mb-0">Brak aktywnego obrazu do oznaczania stref.</p>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Źródło obrazu">
+                                    <button id="ignoreLoadFromCropBtn" class="btn btn-outline-primary btn-sm" type="button">Załaduj z kadrowania</button>
+                                    <button id="ignoreLoadFromRetouchBtn" class="btn btn-outline-primary btn-sm" type="button">Załaduj z narzędzia retuszu</button>
+                                    <button id="ignoreLoadFromPdfBtn" class="btn btn-outline-primary btn-sm" type="button">Załaduj stronę PDF</button>
+                                </div>
+                                <div class="form-check form-check-inline mb-0">
+                                    <input class="form-check-input" type="checkbox" id="ignorePersistHistory">
+                                    <label class="form-check-label small" for="ignorePersistHistory">Zapisz w historii (gdy dostępne)</label>
+                                </div>
+                                <span id="ignoreStatus" class="text-muted small">Brak zapisanych stref.</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <div style="flex: 1 1 360px;">
+                                <h4 class="h6 mb-2">Historia stref</h4>
+                                <ul id="ignoreHistoryList" class="processing-history-list">
+                                    <li class="processing-history-empty small text-muted">Brak zapisanych stref.</li>
+                                </ul>
+                            </div>
+                            <div style="flex: 1 1 360px;">
+                                <h4 class="h6 mb-2">Zapis (JSON)</h4>
+                                <pre id="ignoreExport" class="bg-light p-2 rounded small" style="max-height: 240px; overflow: auto;">[]</pre>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+
+<section class="tab-panel" data-tab-panel="ocr" aria-label="OCR">
+                <article class="surface-card">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h3 class="h5 mb-0">OCR i korekcje</h3>
+                        <button id="ocrRunBtn" class="btn btn-sm btn-outline-success" type="button">Wykonaj OCR schematu</button>
+                    </div>
+                        <div class="mt-2" style="position: relative; display: inline-block;">
+                            <img id="ocrImage" class="img-fluid border" style="display:none; cursor:crosshair;" alt="Podgląd schematu do OCR">
+                            <canvas id="ocrOverlay" style="position:absolute; top:0; left:0; display:none;"></canvas>
+                        </div>
+                        <div id="ocrControls" class="mt-2 mb-2">
+                            <button id="ocrAddRowBtn" class="btn btn-sm btn-outline-secondary" type="button">Dodaj wiersz</button>
+                            <button id="ocrSaveCorrectionsBtn" class="btn btn-sm btn-outline-primary ms-2" type="button">Zapisz korekty</button>
+                        </div>
+                        <p class="small text-muted mb-1"><em>Kliknij w pole, aby edytować wartość. Przycisk × usuwa wiersz.</em></p>
+                        <div id="ocrTableWrap" style="max-height:400px; overflow-y:hidden; border:1px solid #dee2e6;">
+                                <table id="ocrTable" class="table table-sm table-bordered mb-0" style="table-layout:fixed;">
+                                    <thead style="position:sticky; top:0; z-index:1; background:#fff;">
+                                        <tr><th style="width:45%;">Komponent</th><th style="width:45%;">Wartość</th><th title="Usuń wiersz" style="width:10%; text-align:center;">Usuń</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                        </div>
+                        <div class="d-flex justify-content-center mt-1" style="gap:12px;">
+                            <button id="ocrScrollUp" class="btn btn-outline-secondary" type="button" title="Przewiń w górę" style="font-size:1.1rem; padding:2px 18px;">▲ W górę</button>
+                            <button id="ocrScrollDown" class="btn btn-outline-secondary" type="button" title="Przewiń w dół" style="font-size:1.1rem; padding:2px 18px;">▼ W dół</button>
+                        </div>
+                        <script>
+                        (function(){
+                            const wrap = document.getElementById('ocrTableWrap');
+                            function doScroll(dir){
+                                wrap.scrollTop += dir * 80;
+                            }
+                            function scrollRepeat(dir){
+                                doScroll(dir);
+                                let id = setInterval(()=> doScroll(dir), 120);
+                                const stop = ()=>{ clearInterval(id); document.removeEventListener('mouseup', stop); };
+                                document.addEventListener('mouseup', stop);
+                            }
+                            document.getElementById('ocrScrollUp').addEventListener('mousedown', (e)=>{ e.preventDefault(); scrollRepeat(-1); });
+                            document.getElementById('ocrScrollDown').addEventListener('mousedown', (e)=>{ e.preventDefault(); scrollRepeat(1); });
+                        })();
+                        </script>
+                        <pre id="ocrResultsJson" class="mt-2" style="max-height:400px; overflow:auto; font-size:0.85rem; background:#f8f9fa; padding:0.5rem; border:1px solid #ddd; border-radius:0.25rem;"></pre>
+                </article>
+            </section>
+
+<section class="tab-panel" data-tab-panel="symbol-detection" aria-label="Detekcja symboli">
+                <div class="workspace-stack symbol-detection-stack">
+                    <div class="surface-card symbol-preview-card">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <h2 class="h5 mb-0">Sterowanie detektorem</h2>
+                            <button id="symbolRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary">Odśwież listę</button>
+                        </div>
+                        <div class="mt-3 mb-3">
+                            <label class="form-label" for="symbolDetectorSelect">Dostępny detektor</label>
+                            <select id="symbolDetectorSelect" class="form-select" aria-describedby="symbolStatus"></select>
+                            <div id="symbolStatus" class="form-text text-muted mt-2">Ładowanie listy detektorów...</div>
+                        </div>
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" id="symbolStoreHistory" checked>
+                            <label class="form-check-label" for="symbolStoreHistory">Zapisz wynik w historii detekcji</label>
+                        </div>
+                        <div class="border rounded-3 p-3 mb-4">
+                            <h3 class="h6 mb-2">Bieżąca strona (PDF/obraz)</h3>
+                            <p id="symbolPdfInfo" class="small text-muted mb-3">Brak załadowanego dokumentu.</p>
+                            <div class="symbol-source-thumb mb-3">
+                                <img id="symbolPdfThumbnail" class="hidden" alt="Podgląd strony PDF" loading="lazy">
+                                <p id="symbolPdfThumbPlaceholder" class="symbol-thumb-placeholder mb-0">Brak podglądu.</p>
+                            </div>
+                            <button id="symbolUsePdfBtn" type="button" class="btn btn-primary btn-sm">Wykryj na stronie PDF</button>
+                        </div>
+                        <div class="border rounded-3 p-3 mb-4">
+                            <h3 class="h6 mb-2">Bieżący fragment segmentacji</h3>
+                            <p id="symbolSegInfo" class="small text-muted mb-3">Brak aktywnego fragmentu.</p>
+                            <div class="symbol-source-thumb mb-3">
+                                <img id="symbolSegThumbnail" class="hidden" alt="Podgląd fragmentu segmentacji" loading="lazy">
+                                <p id="symbolSegThumbPlaceholder" class="symbol-thumb-placeholder mb-0">Brak podglądu fragmentu segmentacji.</p>
+                            </div>
+                            <button id="symbolSegDetectBtn" type="button" class="btn btn-outline-success btn-sm">Wykryj na bieżącym fragmencie</button>
+                        </div>
+                        <div class="border rounded-3 p-3">
+                            <h3 class="h6 mb-2">Plik graficzny</h3>
+                            <input id="symbolFileInput" type="file" class="form-control form-control-sm mb-2" accept="image/png,image/jpeg,image/webp">
+                            <p id="symbolFileName" class="small text-muted mb-3">Nie wybrano pliku.</p>
+                            <div class="symbol-source-thumb mb-3">
+                                <img id="symbolFileThumbnail" class="hidden" alt="Podgląd wybranego pliku" loading="lazy">
+                                <p id="symbolFileThumbPlaceholder" class="symbol-thumb-placeholder mb-0">Brak podglądu pliku.</p>
+                            </div>
+                            <button id="symbolFileDetectBtn" type="button" class="btn btn-outline-primary btn-sm">Wykryj w pliku</button>
+                        </div>
+                    </div>
+                    <div class="surface-card">
+                        <h2 class="h5 mb-3">Podgląd i wyniki</h2>
+                        <p id="symbolPreviewSource" class="small text-muted">Podgląd niedostępny.</p>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="symbolPreviewOverlayToggle" checked>
+                                <label class="form-check-label" for="symbolPreviewOverlayToggle">Pokaż obrysy</label>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
+                                <label for="symbolConfidenceSlider" class="form-label small mb-0">Próg pewności</label>
+                                <input id="symbolConfidenceSlider" type="range" class="form-range flex-grow-1" min="0" max="1" step="0.01" value="0.00">
+                                <span id="symbolConfidenceValue" class="badge bg-secondary">0.00</span>
+                            </div>
+                        </div>
+                        <div id="symbolPreviewFrame" class="border rounded-3 mb-3 p-2 symbol-preview-frame">
+                            <canvas id="symbolPreviewCanvas" class="symbol-preview-canvas" width="0" height="0"></canvas>
+                        </div>
+                        <div class="d-flex flex-wrap gap-4 mb-3">
+                            <div>
+                                <p class="text-uppercase small mb-1">Liczba detekcji</p>
+                                <p id="symbolResultCount" class="fs-5 fw-semibold mb-0">0</p>
+                            </div>
+                            <div>
+                                <p class="text-uppercase small mb-1">Detektor</p>
+                                <p id="symbolResultDetector" class="fs-6 mb-0">--</p>
+                            </div>
+                            <div>
+                                <p class="text-uppercase small mb-1">Czas</p>
+                                <p id="symbolResultLatency" class="fs-6 mb-0">--</p>
+                            </div>
+                        </div>
+                        <p id="symbolResultSummary" class="small text-muted mb-3">Brak dodatkowych informacji.</p>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Etykieta</th>
+                                        <th scope="col">Ocena</th>
+                                        <th scope="col">Prostokąt [px]</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="symbolResultTableBody">
+                                    <tr>
+                                        <td colspan="4">Brak detekcji.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <a id="symbolHistoryLink" class="btn btn-link btn-sm hidden" href="#" target="_blank" rel="noopener noreferrer">Otwórz zapis w historii</a>
+                        </div>
+                        <h3 class="h6">Dane RAW</h3>
+                        <pre id="symbolRawOutput" class="bg-light rounded-3 p-3 small">Brak danych RAW.</pre>
+                        <div class="symbol-history-section">
+                            <div class="symbol-history-header">
+                                <h3 class="h6 mb-0">Historia detekcji</h3>
+                                <button id="symbolHistoryRefreshBtn" type="button" class="btn btn-sm btn-outline-secondary">Odśwież</button>
+                            </div>
+                            <p id="symbolHistoryEmpty" class="small text-muted mb-3">Brak zapisanych detekcji.</p>
+                            <ul id="symbolHistoryList" class="symbol-history-list"></ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="maintenance" aria-label="Konserwacja">
+                <article class="surface-card" aria-labelledby="maintenanceHeading">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 id="maintenanceHeading" class="h5 mb-0">Pliki tymczasowe</h3>
+                        <span class="status-pill">Automatyczne czyszczenie w przygotowaniu</span>
+                    </div>
+                    <div class="temp-files-section">
+                        <div class="temp-files-info">
+                            <span class="text-muted">Aktualny stan:</span>
+                            <span id="tempFilesInfo" class="temp-files-status">Brak danych</span>
+                        </div>
+                        <button id="cleanupBtn" class="btn btn-outline-danger" type="button" disabled>Wyczyść pliki tymczasowe</button>
+                    </div>
+                    <div class="placeholder mt-3">
+                        <p class="mb-1 fw-semibold">Co dalej?</p>
+                        <p class="mb-0 text-muted">Sekcja diagnostyczna AI oraz generowanie netlist są w planach rozwojowych.</p>
+                    </div>
+                </article>
+            </section>
+
+            <section class="tab-panel" data-tab-panel="about" aria-label="O aplikacji">
+                <article class="surface-card">
+                    <h2 class="h4 mb-4">O aplikacji Talk electronics</h2>
+                    <p class="text-muted mb-3"><strong>Autor:</strong> Robert Bąk (<a href="mailto:robetr@wp.pl">robetr@wp.pl</a>)</p>
+                    <p class="lead mb-4">Narzędzie do analizy schematów elektronicznych – od wczytania PDF do automatycznej detekcji elementów.</p>
+
+                    <h3 class="h5 mb-3">Główne funkcjonalności</h3>
+                    <div class="mb-4">
+                        {%- if about_entries %}
+                            {%- for entry in about_entries %}
+                                <h4 class="h6 fw-bold mb-2">{{ entry.title }}{%- if entry.date %} ({{ entry.date }}){%- endif %}</h4>
+                                {%- if entry['items'] %}
+                                    <ul class="mb-3">
+                                        {%- for it in entry['items'] %}
+                                            <li>{{ it }}</li>
+                                        {%- endfor %}
+                                    </ul>
+                                {%- endif %}
+                            {%- endfor %}
+                        {%- else %}
+                            <!-- Fallback: hard-coded content - kept for compatibility when data file is missing -->
+                            <h4 class="h6 fw-bold mb-2">📄 Przestrzeń robocza (2025-10)</h4>
+                            <ul class="mb-3">
+                                <li>Wczytywanie schematów w formacie PDF</li>
+                                <li>Nawigacja po stronach dokumentu (przyciski poprzednia/następna, bezpośredni wybór strony)</li>
+                                <li>Kontrola powiększenia obrazu (zoom in/out)</li>
+                                <li>Eksport aktualnej strony do PNG z wyborem rozdzielczości (DPI)</li>
+                                <li>Podgląd parametrów renderowania (wymiary w pikselach i calach)</li>
+                            </ul>
+                        {%- endif %}
+                    </div>
+
+                    <h3 class="h5 mb-3">Architektura techniczna</h3>
+                    <ul class="mb-4">
+                        <li><strong>Backend:</strong> Flask (Python) z API REST</li>
+                        <li><strong>Przetwarzanie obrazu:</strong> OpenCV, scikit-image, PyMuPDF</li>
+                        <li><strong>Detekcja symboli:</strong> Rejestr detektorów (bazowy NoOp, prototypowy SimpleThreshold)</li>
+                        <li><strong>Analiza połączeń:</strong> Szkieletyzacja, ekstrakcja węzłów, generowanie grafu</li>
+                        <li><strong>Frontend:</strong> Vanilla JavaScript (moduły ES6), Bootstrap 5</li>
+                        <li><strong>Testy:</strong> Pytest (backend), testy integracyjne API</li>
+                    </ul>
+
+                    <div class="alert alert-warning">
+                        <p class="mb-1 fw-semibold">⚠️ Zastrzeżenie</p>
+                        <p class="mb-0">Aplikacja dostarczana jest "as is", bez gwarancji. Użytkownik ponosi pełną odpowiedzialność za decyzje podjęte na podstawie wyników analizy.</p>
+                    </div>
+
+                    <p class="text-muted small mb-0">Projekt w aktywnym rozwoju – planowane rozszerzenia: trening modeli ML na niestandardowych symbolach, eksport do SPICE, integracja z bazami danych komponentów.</p>
+
+                    <h3 class="h5 mt-4 mb-2">Historia rozwoju (wybrane kamienie milowe)</h3>
+                    <ul class="mb-3">
+                        <li><strong>2025-10:</strong> Podstawowe wczytywanie PDF/obrazów, kadrowanie i eksport PNG.</li>
+                        <li><strong>2025-12-01:</strong> Rozpoczęcie prac nad pipeline YOLO dla detekcji symboli elektronicznych (R, C, L, IC).</li>
+                        <li><strong>2025-12-05:</strong> Pierwsza implementacja detekcji symboli w UI + podgląd wyników YOLO.</li>
+                        <li><strong>2025-12-10:</strong> Dodanie automatycznego retuszu obrazów przed segmentacją (morfologia, threshold).</li>
+                        <li><strong>2025-12-15:</strong> Integracja narzędzi retuszu canvas (pędzel, undo/redo, zoom).</li>
+                        <li><strong>2025-12-20:</strong> Implementacja segmentacji linii i wykrywania węzłów (skeletonization + graph repair).</li>
+                        <li><strong>2025-12-27:</strong> Dodanie stref ignorowanych (ignore zones) do wykluczania fragmentów schematu.</li>
+                        <li><strong>2025-12-30:</strong> Łączenie schematów (edge connectors) — detekcja i zarządzanie połączeniami międzystronicowymi.</li>
+                        <li><strong>2026-01-07:</strong> Heurystyczna detekcja konektorów krawędziowych + test E2E Playwright.</li>
+                        <li><strong>2026-01-12:</strong> Auto-uzupełnianie History ID w formularzu konektorów, ROI metrics w backendzie.</li>
+                        <li><strong>2026-01-13:</strong> Krótki trening YOLOv8s (mix LS + syntetyki) — pierwsze benchmarki wydajności.</li>
+                        <li><strong>2026-01-15:</strong> Stabilizacja Playwright E2E (smoke suite 14/14) + spójne kody błędów w API.</li>
+                        <li><strong>2026-01-17:</strong> Netlist → SPICE: dodano przycisk eksportu, walidację payload, przeniesienie UI panelu.</li>
+                        <li><strong>2026-01-19:</strong> DPI clamping dla podglądu PDF (max 200 DPI), fix pustej zakładki Diagnostyka (DOM structure).</li>
+                    </ul>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast container dla powiadomień -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+
+    <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

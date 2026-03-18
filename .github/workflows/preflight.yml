@@ -1,0 +1,64 @@
+name: Preflight checks
+
+'on':
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'infra/**'
+      - 'docs/**'
+      - '.github/**'
+  push:
+    branches: [ main ]
+
+jobs:
+  pr-preflight:
+    name: PR preflight (dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3
+      - name: "Sanity: check scripts parse"
+        run: python scripts/infra/check_spaces_creds.py --help
+      - name: Run preflight (dry-run)
+        run: |
+          python scripts/infra/preflight_checks.py --endpoint "https://fra1.digitaloceanspaces.com" \
+            --buckets talk-electronic-terraform-state talk-electronic-artifacts --dry-run
+
+  main-preflight:
+    name: Main preflight (full)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3
+      - name: Set TF_VAR_state_bucket from uppercase secret if lowercase missing
+        run: |
+          # If the lowercase var isn't set, and the uppercase secret exists, set it in the env
+          if [ -z "$TF_VAR_state_bucket" ] && [ -n "${{ secrets.TF_VAR_STATE_BUCKET }}" ]; then
+            echo "TF_VAR_state_bucket=${{ secrets.TF_VAR_STATE_BUCKET }}" >> $GITHUB_ENV
+          fi
+      - name: Run full preflight with secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SPACES_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SPACES_SECRET }}
+          SPACES_ENDPOINT: ${{ secrets.SPACES_ENDPOINT }}
+          TF_VAR_state_bucket: ${{ secrets.TF_VAR_state_bucket }}
+        run: |
+          python scripts/infra/preflight_checks.py --endpoint "$SPACES_ENDPOINT" \
+            --buckets $TF_VAR_state_bucket talk-electronic-artifacts --check-versioning --test-upload
+
+# Note: the main preflight job is skipped when the required secrets are not set,
+# preventing accidental failures on branches where secrets are not configured.

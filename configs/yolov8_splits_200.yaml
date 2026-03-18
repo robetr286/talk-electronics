@@ -1,0 +1,55 @@
+# YOLOv8 Dataset Configuration - Syntetyczne Schematy (200 obrazów)
+# Dataset: 200 syntetycznych schematów elektronicznych
+# Split: 140 train / 30 val / 30 test (70/15/15)
+
+# Ścieżki do datasetu
+path: data/synthetic/splits_yolo  # root directory
+train: train/images  # Directory with train images (140 images, 2608 annotations)
+val: val/images      # Directory with val images (30 images, 539 annotations)
+test: test/images    # Directory with test images (30 images, 533 annotations)
+
+# Nazwy klas (zgodne z COCO categories)
+names:
+  0: resistor      # Rezystory
+  1: capacitor     # Kondensatory
+  2: inductor      # Cewki/induktory
+  3: diode         # Diody
+
+# Liczba klas
+nc: 4
+
+# Dodatkowe informacje
+# -----------------
+# Dataset wygenerowany: 13-14.11.2025
+# Generator: scripts/synthetic/batch_generate.py (PIL-based mock)
+# Liczba obrazów: 200 (seed 200-249 + 300-449)
+# Liczba anotacji: 3680 (959 resistor, 894 capacitor, 938 inductor, 889 diode)
+# Format: COCO Instance Segmentation
+# Balans klas: ~24-26% per kategoria (bardzo dobry)
+# Outliers: 0 (doskonała jakość)
+#
+# Statystyki per kategoria:
+#   - Resistor: area=1200px², AR=1.69±1.33 (różne orientacje)
+#   - Capacitor: area=800px², AR=1.21±0.75 (mniejsze komponenty)
+#   - Inductor: area=1200px², AR=1.61±1.33 (podobne do rezystorów)
+#   - Diode: area=1600px², AR=1.00±0.00 (zawsze kwadratowe)
+#
+# Użycie:
+#   # Baseline trening YOLOv8-nano (szybki test)
+#   yolo task=segment mode=train model=yolov8n-seg.pt data=configs/yolov8_splits_200.yaml epochs=50 imgsz=640
+#
+#   # Pełny trening YOLOv8-small (większa pojemność)
+#   yolo task=segment mode=train model=yolov8s-seg.pt data=configs/yolov8_splits_200.yaml epochs=100 imgsz=640 batch=16
+#
+#   # Walidacja
+#   yolo task=segment mode=val model=runs/segment/train/weights/best.pt data=configs/yolov8_splits_200.yaml
+#
+#   # Inferencja
+#   yolo task=segment mode=predict model=runs/segment/train/weights/best.pt source=data/synthetic/images_raw
+#
+# Następne kroki po treningu:
+#   1. Analiza confusion matrix (scripts/analyze_confusion_matrix.py)
+#   2. Benchmark na test set (scripts/run_inference_benchmark.py)
+#   3. Eksport metryk do reports/baseline_synthetic.md
+#   4. Merge z realnymi danymi z Label Studio
+#   5. Fine-tuning na mixed dataset (synthetic + real)

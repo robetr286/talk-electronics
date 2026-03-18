@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "COCO Annotation Schema",
+  "type": "object",
+  "required": ["images", "annotations", "categories"],
+  "properties": {
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "file_name", "width", "height"],
+        "properties": {
+          "id": {"type": "integer"},
+          "file_name": {"type": "string"},
+          "width": {"type": "integer", "minimum": 1},
+          "height": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "image_id", "category_id", "bbox"],
+        "properties": {
+          "id": {"type": "integer"},
+          "image_id": {"type": "integer"},
+          "category_id": {"type": "integer"},
+          "bbox": {
+            "type": "array",
+            "items": {"type": "number"},
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "attributes": {"type": "object"}
+        }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "integer"},
+          "name": {"type": "string"}
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

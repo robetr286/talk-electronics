@@ -1,0 +1,49 @@
+# YOLOv8 Dataset Configuration - Syntetyczne Schematy v2 (450 obrazów)
+# Split: 315 train / 67 val / 68 test (70/15/15)
+
+path: data/synthetic/splits_v2_450
+train: train/images
+val: val/images
+test: test/images
+
+names:
+  0: resistor
+  1: capacitor
+  2: inductor
+  3: diode
+
+nc: 4
+
+# Zalecany trening YOLOv8-small na pełnym v2.0
+#   yolo task=segment mode=train \
+#     model=yolov8s-seg.pt \
+#     data=configs/yolov8_v2_moderate.yaml \
+#     epochs=75 \
+#     batch=12 \
+#     imgsz=640 \
+#     degrees=8.0 \
+#     shear=1.5 \
+#     flipud=0.0 \
+#     copy_paste=0.15 \
+#     mixup=0.10
+
+training:
+  epochs: 75
+  batch: 12
+  imgsz: 640
+  seed: 42
+  augmentations:
+    degrees: 8.0
+    shear: 1.5
+    flipud: 0.0
+    mosaic: 0.8
+    mixup: 0.10
+    copy_paste: 0.15
+    hsv_h: 0.015
+    hsv_s: 0.7
+    hsv_v: 0.4
+  notes: |
+    Profil "moderate v2" ma wykorzystać pełny zakres 450 obrazów bez agresywnego
+    niszczenia kształtów. Jeśli recall nadal spada, zmniejsz copy_paste do 0.05
+    i rozważ zwiększenie epochs do 100. Ustawienia mosaic/mixup można wyłączyć
+    flagami CLI, jeśli w trakcie treningu pojawią się artefakty.

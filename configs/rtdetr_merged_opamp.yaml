@@ -1,0 +1,17 @@
+# RT-DETR-L training config for merged_opamp_14_01_2026 dataset
+# Ten sam dataset na którym YOLO cosine_lr003 osiągnął best mAP50(B)=0.917
+# Train: 11 realnych + 800 syntetycznych = 811 obrazów
+# Val: 3 realne, Test: 4 realne
+# 5 klas: resistor, capacitor, inductor, diode, op_amp
+
+path: data/yolo_dataset/merged_opamp_14_01_2026
+train: train/images
+val: val/images
+test: test/images
+
+names:
+  0: resistor
+  1: capacitor
+  2: inductor
+  3: diode
+  4: op_amp

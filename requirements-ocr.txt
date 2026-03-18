@@ -1,0 +1,8 @@
+# Optional OCR model dependencies for research
+# Install manually if you want to run OCR candidate tests locally or in a dedicated job
+
+# DocTR (Doctr) - recommended: https://github.com/mindee/doctr
+doctr
+
+# Surya OCR - confirmed PyPI package name
+surya-ocr

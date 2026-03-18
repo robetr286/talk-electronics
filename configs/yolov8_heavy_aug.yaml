@@ -1,0 +1,71 @@
+# YOLOv8 Dataset Configuration - Heavy Augmentations Test
+# Cel: Poprawa Recall z 74.9% do 80-85% przez intensywne augmentacje
+#
+# Zmiany vs baseline:
+#   - degrees: 7 -> 15 (większe rotacje)
+#   - shear: 0 -> 5 (deformacje perspektywiczne)
+#   - scale: 0.5 -> [0.5, 1.5] (większy zakres skalowania)
+#   - flipud: 0.0 -> 0.5 (odbicie pionowe)
+#   - mosaic: 1.0 (mosaic augmentation włączona)
+
+# Ścieżki do datasetu (używamy v1.0 - 200 obrazów)
+path: data/synthetic/splits_yolo  # Root directory
+train: train/images                # Train images relative to path
+val: val/images                    # Val images relative to path
+test: test/images                  # Test images relative to path
+
+# Klasy
+names:
+  0: resistor
+  1: capacitor
+  2: inductor
+  3: diode
+
+nc: 4
+
+# ========================================
+# HEAVY AUGMENTATIONS
+# ========================================
+
+# Rotacje i deformacje geometryczne
+degrees: 15.0          # +/- 15 stopni rotacji (baseline: 7)
+shear: 5.0             # +/- 5 stopni shear (baseline: 0)
+scale: 0.5             # Skalowanie 0.5-1.5x (baseline: 0.5)
+perspective: 0.0001    # Perspektywa (default)
+translate: 0.1         # Przesunięcie +/- 10% (default)
+
+# Odbicia lustrzane
+flipud: 0.5            # Odbicie pionowe 50% (baseline: 0.0)
+fliplr: 0.5            # Odbicie poziome 50% (default)
+
+# Augmentacje kolorystyczne
+hsv_h: 0.015           # Hue (default)
+hsv_s: 0.7             # Saturation (default)
+hsv_v: 0.4             # Value/brightness (default)
+
+# Mosaic i mixup
+mosaic: 1.0            # Mosaic augmentation (łączy 4 obrazy)
+mixup: 0.0             # Mixup wyłączony (może być za mocny dla segmentacji)
+copy_paste: 0.0        # Copy-paste wyłączony
+
+# ========================================
+# Parametry treningu (jak baseline)
+# ========================================
+epochs: 50             # 50 epok (jak baseline)
+batch: 16              # Batch size 16
+imgsz: 640             # Rozmiar obrazu 640x640
+optimizer: auto        # AdamW/SGD auto-select
+lr0: 0.01              # Początkowy learning rate
+lrf: 0.01              # Final learning rate
+momentum: 0.937        # SGD momentum
+weight_decay: 0.0005   # Regularyzacja
+warmup_epochs: 3.0     # Warmup przez 3 epoki
+box: 7.5               # Box loss gain
+cls: 0.5               # Class loss gain
+dfl: 1.5               # DFL loss gain
+
+# Walidacja i zapisywanie
+# val: true          # Nie dodawać - konflikt z val dataset path
+# plots: true        # Nie dodawać - użyj parametru CLI
+# save: true         # Nie dodawać - użyj parametru CLI
+# save_period: -1    # Nie dodawać - użyj parametru CLI

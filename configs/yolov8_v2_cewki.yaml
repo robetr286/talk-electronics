@@ -1,0 +1,12 @@
+path: /home/robert-b-k/Talk_electronics/Talk_electronic/data/yolo_dataset/merged_opamp_14_01_2026
+train: train/images
+val: val/images
+test: test/images
+
+# Classes
+names:
+  0: resistor
+  1: capacitor
+  2: inductor
+  3: diode
+  4: op_amp
