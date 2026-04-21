@@ -40,9 +40,7 @@ jobs:
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install --no-cache-dir -r requirements.txt
-          # Free space on runner after installing heavy wheels
-          pip cache purge || true
+          pip install --no-cache-dir -r requirements-test.txt
 
       - name: Start Flask app
         run: |
@@ -122,7 +120,7 @@ jobs:
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements-test.txt
 
       - name: Start Flask app
         run: |
@@ -132,10 +130,8 @@ jobs:
           FLASK_ENV: development
 
       - name: Wait for server port
-        uses: jakejarvis/wait-action@v0.2.0
-        with:
-          timeout: 60
-          port: 5000
+        run: |
+          npx wait-on http://127.0.0.1:5000 --timeout 60000
 
       - name: Run full Playwright tests
         id: playwright-full

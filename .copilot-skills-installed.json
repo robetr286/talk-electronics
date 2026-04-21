@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "name": "caveman",
+      "repo": "https://github.com/JuliusBrussee/caveman",
+      "installedAt": "2026-04-19T16:48:33.415Z",
+      "files": [
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/caveman/SKILL.md",
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/caveman/SKILL.md",
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/caveman/SKILL.md",
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/caveman/SKILL.md"
+      ]
+    },
+    {
+      "name": "compress",
+      "repo": "https://github.com/JuliusBrussee/caveman",
+      "installedAt": "2026-04-19T16:48:33.777Z",
+      "files": [
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/compress/SKILL.md",
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/compress/SKILL.md"
+      ]
+    },
+    {
+      "name": "caveman-commit",
+      "repo": "https://github.com/JuliusBrussee/caveman",
+      "installedAt": "2026-04-19T16:48:33.874Z",
+      "files": [
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/caveman-commit/SKILL.md"
+      ]
+    },
+    {
+      "name": "caveman-help",
+      "repo": "https://github.com/JuliusBrussee/caveman",
+      "installedAt": "2026-04-19T16:48:33.981Z",
+      "files": [
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/caveman-help/SKILL.md"
+      ]
+    },
+    {
+      "name": "caveman-review",
+      "repo": "https://github.com/JuliusBrussee/caveman",
+      "installedAt": "2026-04-19T16:48:34.081Z",
+      "files": [
+        "/home/robert-b-k/Talk_electronics/Talk_electronic_public/.github/skills/caveman-review/SKILL.md"
+      ]
+    }
+  ]
+}
