@@ -10,7 +10,7 @@ test('OCR tab can trigger OCR and display results', async ({ page }) => {
   await expect(page.locator('#ocrRunBtn')).toBeVisible();
 
   // stub backend call
-  await page.route('**/ocr/textract', async (route) => {
+  await page.route('**/ocr/paddle', async (route) => {
     const fake = {
       request_id: 'playwright-id',
       tokens: [],
@@ -65,7 +65,7 @@ test('OCR tab can trigger OCR and display results', async ({ page }) => {
   expect(hasContent).toBe(true);
 
   // now stub corrections endpoint and test save
-  await page.route('**/ocr/textract/corrections', async (route) => {
+  await page.route('**/ocr/paddle/corrections', async (route) => {
     const fakeResp = { status: 'ok', path: '/fake/path.json' };
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeResp) });
   });

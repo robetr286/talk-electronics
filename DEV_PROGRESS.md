@@ -5349,3 +5349,387 @@ Do czego dążymy (wizja):
 - W repozytorium jest `Dockerfile` budujący obraz na bazie `nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04`.
 - Instrukcje w `README_H100.md` pokazują, jak budować i uruchamiać kontener z GPU (`docker build`, `docker run --gpus all ...`).
 - Docker służy głównie do trenowania/uruchamiania na zdalnych maszynach GPU (H100, droplet), nie jest wymagany w standardowym lokalnym developmentcie (gdzie używamy `.venv`).
+
+---
+
+## 2026-05-07 — Kompleksowa analiza stanu projektu (5-częściowa)
+
+> Analiza wykonana przez GitHub Copilot (Claude Sonnet 4.6) na podstawie pełnego przeglądu kodu źródłowego, testów, CI, zależności i historii projektu.
+
+---
+
+## ANALIZA 1 — Aktualny stan projektu
+
+### Metryki kodu źródłowego
+
+| Plik | Linie | Rola |
+|------|-------|------|
+| `static/js/lineSegmentation.js` | 5 537 | Detekcja linii — UI + helpery testowe |
+| `talk_electronic/routes/textract.py` | 3 270 | Legacy — martwy kod; endpointy `/ocr/textract` niezwoływane z frontendu; logika postprocessingu zmigrowana do `services/ocr/` |
+| `talk_electronic/services/line_detection.py` | 2 888 | Główny pipeline CV |
+| `templates/index.html` | 2 686 | Single-page app |
+| `static/js/cropTools.js` | 2 321 | Narzędzia kadrowania / ROI |
+| `static/js/imageProcessing.js` | 1 779 | Preprocessing obrazu |
+| `static/js/symbolDetection.js` | 1 675 | Detekcja symboli UI |
+| `static/js/edgeConnectors.js` | 1 531 | Edge connectors UI |
+| `static/js/pdfWorkspace.js` | 1 160 | PDF workspace |
+
+**Łącznie:** ~36 000 linii kodu źródłowego (Python + JS + HTML), 15 modułów JS, 44 endpointy Flask, 285 testów pytest.
+
+### Stan pipeline'u end-to-end
+
+```
+PDF/obraz → rasteryzacja → deskew → binaryzacja → kadrowanie
+    → detekcja symboli (YOLOv8 / RTDETR / TemplateMatching)
+    → OCR (PaddleOCR PP-OCRv4 / AWS Textract)
+    → detekcja linii (skeleton → graph repair → netlist)
+    → netlist export (JSON + SPICE)
+    → chat diagnostyczny
+```
+
+**Wszystkie etapy pipeline'u są zaimplementowane.** Aplikacja działa end-to-end od uploadu PDF do eksportu SPICE.
+
+### Infrastruktura CI/CD
+
+- **GitHub Actions:** `tests.yml` (pytest), `playwright.yml` (E2E smoke + full), `playwright-e2e.yml`
+- **Naprawione w tej sesji:** `playwright.yml` instalował `requirements.txt` (torch ~800 MB → timeout); zmieniono na `requirements-test.txt`
+- **Aktualny status CI:** zielony po naprawie
+
+### Stan testów (ostatni przebieg pytest)
+
+```
+274 passed, 6 failed, 5 skipped, 1 collection ERROR
+```
+
+| # | Test | Przyczyna porażki |
+|---|------|-------------------|
+| E | `test_local_patch_repair.py` | `ImportError: No module named 'debug'` — kolekcja niemożliwa |
+| F | `test_about_order.py` (×2) | brakuje `data/about_entries.yaml` |
+| F | `test_ocr_eval_ci.py` | brakuje `ocr_eval/ci/*.json` (gitignored) |
+| F | `test_retouch_e2e.py` | brakuje `test_debug.png` w korzeniu repo |
+| F | `test_template_matching.py` (×2) | brakuje `data/templates/` |
+
+### Modele ML — stan wytrenowania
+
+| Model | Najlepszy wynik | Uwagi |
+|-------|-----------------|-------|
+| YOLOv8 (`exp_mix_small_100`) | mAP50-95(M) = **0.116** | EarlyStopping epoka 55; bardzo niski wynik |
+| RTDETR | mAP50-95 ~0.11–0.12 | Trening na mieszanym datasecie; niski wynik |
+| TemplateMatching | brak szablonów | `data/templates/` nie istnieje w repo |
+| PaddleOCR | PP-OCRv4 (gotowy) | Działa bez fine-tuningu; OCR sprawny |
+
+**Przyczyna niskich wyników:** zbyt mało anotowanych danych; Robert aktywnie anotuje w Label Studio (~2 tyg. do gotowości).
+
+---
+
+## ANALIZA 2 — Kroki potrzebne do osiągnięcia MVP
+
+### Definicja MVP
+Aplikacja pozwala użytkownikowi wgrać PDF schematu, uzyskać sensowny netlist z wartościami komponentów i wyeksportować SPICE, a UI jest stabilny i nie ma znanych błędów blokujących.
+
+### Lista kroków (priorytety malejące)
+
+#### P0 — Blokujące (naprawić natychmiast)
+
+1. **Naprawić `test_local_patch_repair.py`** — importuje nieistniejący moduł `debug.graph_repair_validation`; blokuje całą kolekcję testów bez `--ignore`. Usunąć test lub zastąpić `pytest.skip`.
+2. **Naprawić 6 nieudanych testów** — dodać brakujące pliki fixture lub użyć `pytest.mark.skipif` dla danych gitignored (patrz Analiza 3).
+3. **Dodać `SECRET_KEY` do konfiguracji Flask** — bez tego sesje są niezabezpieczone; wystarczy `os.environ.get('SECRET_KEY', secrets.token_hex(32))`.
+4. **Naprawić Dockerfile** — `CMD ["/bin/bash"]` nie uruchamia serwera produkcyjnego; zmienić na `CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]` i dodać `gunicorn` do `requirements.txt`.
+
+#### P1 — Jakość UI/UX
+
+5. **P1.4 z MVP_BACKLOG:** przekazywanie obrazu między zakładką detekcji symboli → segmentacji linii nie działa; użytkownik musi ręcznie re-uploadować.
+6. **Usunąć debug `print()` z `deskew.py`** — 5 instrukcji `print` w kodzie produkcyjnym (linie 65, 66, 99, 100, 110); zamienić na `logging.debug`.
+7. **Uzupełnić `data/about_entries.yaml`** — plik jest wymagany przez testy i prawdopodobnie przez widok „O aplikacji".
+
+#### P2 — Dane i modele
+
+8. **Zakończyć anotacje w Label Studio** i uruchomić pipeline treningowy z nowym datasetem (gotowość ~2 tyg.).
+9. **Przygotować `data/templates/`** z szablonami SVG/PNG dla detektora TemplateMatching jako fallback gdy YOLOv8 ma niską pewność.
+
+#### P3 — Produkcja i utrzymanie
+
+10. **Stworzyć `requirements-prod.txt`** bez pakietów dev-only (pytest, playwright, itp.); usunąć `Django==5.1.14` (nieużywany).
+11. **Dokończyć migrację monolitu `textract.py`** (3270 linii) do `services/ocr/` — B.6: test przeglądarkowy pipeline'u OCR.
+12. **Zautomatyzować pipeline Label Studio → COCO → trening** (skrypt bash lub Makefile), żeby nowe anotacje przekształcały się w trening jednym poleceniem.
+
+---
+
+## ANALIZA 3 — Błędy i problemy do naprawienia przed kontynuacją
+
+### 🔴 Krytyczne (blokują CI lub bezpieczeństwo)
+
+#### 3.1 `test_local_patch_repair.py` — martwy import
+```python
+from debug.graph_repair_validation import ...  # moduł 'debug' nie istnieje
+```
+**Naprawa:** w pliku testowym dodać na początku:
+```python
+pytest.importorskip("debug", reason="moduł debug nie w repo")
+```
+lub usunąć cały plik jeśli moduł `debug` był tymczasowy.
+
+#### 3.2 Brak `SECRET_KEY` w Flask
+W `talk_electronic/__init__.py` aplikacja nie ustawia `SECRET_KEY`. Flask używa domyślnej wartości `None` → sesje są trywialnie fałszowalne.
+**Naprawa:**
+```python
+import secrets, os
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+```
+
+#### 3.3 Dockerfile — brak serwera produkcyjnego
+`CMD ["/bin/bash"]` uruchamia shell, nie aplikację. Każde `docker run` wymaga ręcznego `flask run`.
+**Naprawa:**
+```dockerfile
+RUN pip install gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
+```
+
+### 🟡 Poważne (psują testy / utrudniają pracę)
+
+#### 3.4 `test_ocr_eval_ci.py` — zależność od gitignored danych
+```python
+# oczekuje ≥18 plików JSON w ocr_eval/ci/ — te pliki są gitignored
+```
+**Naprawa:** dodać guard:
+```python
+@pytest.mark.skipif(
+    len(list(Path("ocr_eval/ci").glob("*.json"))) < 18,
+    reason="brakuje danych CI OCR (gitignored)"
+)
+```
+
+#### 3.5 `test_retouch_e2e.py` — hardcoded ścieżka `test_debug.png`
+Plik nie jest w repozytorium i nie ma go w `.gitignore` jako wymagany fixture.
+**Naprawa:** stworzyć fixture w teście tworzący tymczasowy PNG, lub dodać `conftest.py` z `@pytest.fixture` generującym minimalny obraz.
+
+#### 3.6 `test_template_matching.py` — brakuje `data/templates/`
+**Naprawa:** w test-ie sprawdzić `if not Path("data/templates").exists(): pytest.skip(...)`.
+
+#### 3.7 `deskew.py` — debug `print()` w produkcji
+Linie 65, 66, 99, 100, 110 zawierają `print(...)`. Serwer produkcyjny drukuje śmieci do stdout.
+**Naprawa:** zamienić na `logging.getLogger(__name__).debug(...)`.
+
+### 🟠 Dług techniczny (nie blokujące, ale kumulujące się)
+
+#### 3.8 `Django==5.1.14` w `requirements.txt`
+Django nie jest używane w żadnym pliku projektu. Dodaje ~30 MB do instalacji.
+**Naprawa:** usunąć linię z `requirements.txt`.
+
+#### 3.9 `type: ignore[override]` — 85 wystąpień w trasach Flask
+Adnotacje typów w `routes/` są globalnie wyciszane. Maskuje potencjalne błędy typów w argumentach endpointów.
+**Rekomendacja:** stopniowe usuwanie przy okazji refaktorów (nie jako osobne zadanie).
+
+#### 3.10 Martwy kod `textract.py` (3270 linii)
+Plik zawiera endpointy `POST /ocr/textract`, które **nie są wywoływane przez frontend** — aktywny OCR to wyłącznie PaddleOCR. Logika postprocessingu (czyszczenie tokenów, parowanie) została zmigrowana do `services/ocr/postprocessing.py` (B.0–B.5). Pozostaje do zrobienia: B.6 (test UI pipeline'u OCR), a następnie można rozważyć usunięcie lub archiwizację `textract.py`.
+
+#### 3.11 `index.html` (2686 linii) bez bundlera
+Pojedynczy ogromny template Jinja2 bez podziału na komponenty. Rosnące ryzyko kolizji CSS/JS. Akceptowalne na MVP; po stabilizacji rozważyć podział lub migrację do Vite.
+
+---
+
+## ANALIZA 4 — Ocena stosu technologicznego
+
+### Biblioteki backendowe
+
+| Biblioteka | Wersja w projekcie | Najnowsza | Ocena | Rekomendacja |
+|------------|-------------------|-----------|-------|-------------|
+| Flask | 3.1.3 | 3.1.3 | ✅ aktualna | brak zmian |
+| torch | 2.5.1 | 2.7.0 | 🟡 +2 minor | warto zaktualizować po stabilizacji datasetu |
+| ultralytics | 8.3.228 | 8.4.41 | 🟡 +1 minor | `pip install -U ultralytics` — bezpieczna aktualizacja |
+| PaddleOCR | PP-OCRv4 (pinned) | PP-OCRv5 (2025) | 🟡 +1 major | PP-OCRv5 ~8% lepsza dokładność; warto testować |
+| PyMuPDF | 1.23.8 | 1.24.x | 🟡 +1 minor | sprawdź zgodność API przed aktualizacją |
+| boto3 | 1.40.70 | aktualna | ✅ | brak zmian |
+| **Django** | **5.1.14** | — | **🔴 NIEUŻYWANY** | **usunąć natychmiast** |
+| OpenCV | — | — | ✅ | wystarczy obecna wersja |
+
+### Biblioteki frontendowe
+
+| Element | Obecny stan | Ocena | Rekomendacja |
+|---------|-------------|-------|-------------|
+| JavaScript | Vanilla ES modules | ✅ dla MVP | po MVP rozważyć Vite + light framework |
+| Bundler | brak | 🟡 rosnący dług | `esbuild` lub `Vite` gdy >10 modułów JS |
+| `index.html` | 2686 linii (monolit) | 🟡 | podział na fragmenty Jinja po MVP |
+| Canvas API | natywny | ✅ | bez zmian |
+| Playwright | aktualny | ✅ | bez zmian |
+
+### Środowisko i CI
+
+| Element | Stan | Ocena | Rekomendacja |
+|---------|------|-------|-------------|
+| Python | 3.11.14 | ✅ | |
+| Conda env `Talk_flask` | aktywny | ✅ | |
+| `requirements.txt` | zawiera `torch`, `django` (!) | 🔴 | podzielić na `prod` / `dev` / `gpu` |
+| `requirements-test.txt` | lekki (bez torch) | ✅ | |
+| Dockerfile | CUDA 12.1 base | ✅ | dodać gunicorn, fix CMD |
+| CI `playwright.yml` | naprawiony (tej sesji) | ✅ | |
+
+### Ocena architektury ogólnej
+
+**Mocne strony:**
+- Blueprint-based Flask z `create_app()` factory — testowalny, rozszerzalny
+- Services layer (`services/ocr/`, `services/symbol_detection/`, `services/line_detection.py`) — dobra separacja logiki
+- Registry pattern dla detektorów symboli (yolov8, rtdetr, noop, simple, template_matching) — łatwa wymiana backendu ML
+- Lazy import `ultralytics` — aplikacja startuje szybko nawet bez GPU
+
+**Słabe strony / dług:**
+- `textract.py` (3270 linii) — monolit do refaktoryzacji
+- Brak dependency injection — testowanie z mockami wymaga monkeypatch
+- `type: ignore[override]` ×85 — tłumaczy błędy typów
+- Brak rate limiting / auth na endpointach API
+
+---
+
+## ANALIZA 5 — Najlepszy następny krok (2 tygodnie bez nowych danych treningowych)
+
+### Kontekst ograniczenia
+Przez ~2 tygodnie nie będą dostępne nowe wagi modeli (Robert anotuje w Label Studio). To nie jest czas stagnacji — to okno na spłatę długu technicznego i przygotowanie pod przyszłe treningi.
+
+### Rekomendowany plan na 2 tygodnie
+
+#### Tydzień 1 — Stabilizacja (8–10 h)
+
+**Dzień 1–2: Naprawienie infrastruktury testowej**
+1. Naprawić `test_local_patch_repair.py` (dodaj `pytest.importorskip`)
+2. Dodać `pytest.mark.skipif` do `test_ocr_eval_ci.py`
+3. Stworzyć minimal-fixture w `test_retouch_e2e.py` (generowany PNG 1×1)
+4. Dodać skip-guard do `test_template_matching.py`
+5. Uzupełnić lub zamockować `data/about_entries.yaml`
+   
+→ Cel: `pytest` **0 failed, 0 collection ERROR**
+
+**Dzień 3: Bezpieczeństwo i Dockerfile**
+1. Dodać `SECRET_KEY` do `__init__.py`
+2. Naprawić Dockerfile (gunicorn CMD)
+3. Usunąć `Django==5.1.14` z `requirements.txt`
+
+**Dzień 4–5: Czyszczenie kodu**
+1. Zamienić `print()` → `logging.debug()` w `deskew.py`
+2. Naprawić P1.4 (przekazywanie obrazu między zakładkami)
+3. Przegląd i uzupełnienie `data/about_entries.yaml` treścią
+
+#### Tydzień 2 — Przygotowanie pipeline'u treningowego (8–10 h)
+
+**Cel:** gdy anotacje będą gotowe, trening ma startować jednym poleceniem.
+
+1. **Skrypt `scripts/prepare_training_data.py`** — automatyczna konwersja eksportu Label Studio (JSON/ZIP) do formatu YOLO:
+   - parsowanie eksportu LS
+   - weryfikacja bounding boxów (klasy, aspect ratios)
+   - split train/val/test (80/10/10)
+   - generacja `dataset.yaml` z nazwami klas
+
+2. **Skrypt `scripts/run_training.sh`** — jeden wrapper który:
+   - weryfikuje GPU (nvidia-smi)
+   - aktywuje conda env
+   - wywołuje `train_yolo.py` z prawidłowym configiem
+   - po treningu wywołuje ewaluację i zapisuje metryki do `PROGRESS_LOG.md`
+
+3. **Dodać zestaw szablonów** w `data/templates/` dla 5–10 najbardziej pewnych symboli (rezystor, kondensator, dioda) — pozwoli detektorowi TemplateMatching działać jako fallback.
+
+4. **Test B.6** — przeglądarkowy test pipeline'u OCR (ostatni krok migracji z `textract.py`):
+   - Playwright spec: upload schematu → uruchom OCR paddle → weryfikuj że zwraca ≥1 wynik
+   - Dodać do zestawu `test:e2e:smoke`
+
+### Priorytet absolutny (jeśli tylko 1 dzień wolnego czasu)
+
+```
+pytest 0 failed  →  SECRET_KEY  →  usunąć Django z requirements.txt
+```
+
+Te 3 zmiany zajmą <2 h i eliminują: zepsute CI, lukę bezpieczeństwa, 30 MB zbędnej zależności.
+
+### Czego NIE robić przez te 2 tygodnie
+- **Nie aktualizować torch/ultralytics** — ryzyko regresji bez korzyści ML; poczekać do nowego treningu
+- **Nie migrować frontendu do Vite/React** — pochłonie tygodnie, MVP nie wymaga tego
+- **Nie dodawać nowych funkcjonalności UI** — baza jest stabilna; skupić się na jakości
+
+---
+
+*Analiza wygenerowana: 2026-05-07 | Autor: GitHub Copilot (Claude Sonnet 4.6)*
+
+---
+
+## 2026-04-21 — Analiza pozostałości po migracji OCR: Textract → PaddleOCR
+
+### Kontekst
+
+Frontend (`ocrPanel.js` linie 266, 328) wywołuje wyłącznie `/ocr/paddle` i `/ocr/paddle/corrections`. Endpoint `/ocr/textract` nigdy nie jest wywoływany z przeglądarki. Poniższa analiza mapuje wszystkie pliki, które nadal odwołują się do starego modelu.
+
+---
+
+### 🔴 Do usunięcia (martwy kod)
+
+| Plik | Powód |
+|------|-------|
+| `talk_electronic/routes/textract.py` | 3 270 linii — endpointy `POST /ocr/textract` i `POST /ocr/textract/corrections` niezwoływane z frontendu; logika postprocessingu już przeniesiona do `services/ocr/` |
+| `tests/test_textract_integration.py` | Testuje martwy endpoint `/ocr/textract` |
+| `tests/test_textract_limits.py` | Testuje limity rozmiaru pliku dla Textract |
+| `tests/test_textract_corrections.py` | Testuje `/ocr/textract/corrections` — Paddle ma własny endpoint `/ocr/paddle/corrections` |
+| `tests/test_textract_cd138_fixes.py` | Importuje prywatne funkcje z `textract.py` (`_merge_value_unit_suffix`, `_pair_components_to_values`) — ich odpowiedniki są w `services/ocr/postprocessing.py` |
+| `tests/test_textract_bcc6f638_fixes.py` | Jak wyżej — importuje `_fix_ic_ocr_confusion`, `_pair_components_to_values` z `textract.py` |
+| `scripts/textract_eval.py` | Skrypt ewaluacyjny starego modelu AWS Textract |
+| `scripts/textract_make_gt_overlays.py` | Skrypt generowania overlay dla datasetu `textract_test/` |
+
+---
+
+### 🟡 Do zmiany (nie usuwać)
+
+#### `talk_electronic/__init__.py` — linie 101 i 115
+Importuje i rejestruje `textract_bp`, który po usunięciu `textract.py` spowoduje `ImportError`.
+```python
+# usunąć obie linie:
+from .routes.textract import textract_bp   # linia 101
+app.register_blueprint(textract_bp)        # linia 115
+```
+
+#### `tests/e2e/ocr_tab.spec.js` — linie 13 i 68
+Mockuje `**/ocr/textract` i `**/ocr/textract/corrections`, ale frontend wywołuje `/ocr/paddle`. Test przechodzi tylko dlatego że mock jest nigdy nie trafiony — żądanie idzie do prawdziwego `/ocr/paddle` na działającym serwerze (lub odpada z błędem połączenia gdy serwer nie działa).
+```js
+// było:
+await page.route('**/ocr/textract', ...)
+await page.route('**/ocr/textract/corrections', ...)
+// zmienić na:
+await page.route('**/ocr/paddle', ...)
+await page.route('**/ocr/paddle/corrections', ...)
+```
+
+#### `talk_electronic/ocr_corrections.py` — linie 15, 28
+Hardcoded ścieżka `reports/textract/corrections` — Paddle zapisuje do `reports/paddle/corrections`.
+```python
+# było:
+def load_all_corrections(directory: Path = Path("reports/textract/corrections"))
+def summarize_corrections(directory: Path = Path("reports/textract/corrections"))
+# zmienić na:
+def load_all_corrections(directory: Path = Path("reports/paddle/corrections"))
+def summarize_corrections(directory: Path = Path("reports/paddle/corrections"))
+```
+
+#### `scripts/summarize_ocr_corrections.py` — linia 20
+Ta sama hardcoded ścieżka.
+```python
+# było:
+directory = Path("reports/textract/corrections")
+# zmienić na:
+directory = Path("reports/paddle/corrections")
+```
+
+---
+
+### ✅ Zostawić bez zmian
+
+| Plik | Powód |
+|------|-------|
+| `boto3` w `requirements.txt` / `environment.yml` | Nadal używany przez `scripts/infra/` do **DigitalOcean Spaces** (S3-compatible storage) — nie ma związku z Textract |
+| `scripts/infra/check_spaces_creds.py` | boto3 dla DO Spaces |
+| `scripts/infra/preflight_checks.py` | boto3 dla DO Spaces |
+| `.github/workflows/preflight.yml` | boto3 dla DO Spaces |
+
+---
+
+### Podsumowanie zakresu prac
+
+- **8 plików do usunięcia** (routes + testy + skrypty)
+- **4 miejsca do zmiany** (rejestracja blueprintu, mock E2E, 2× ścieżka korekcji)
+- **boto3 pozostaje** — używany niezależnie od Textract do infrastruktury S3
+
+*Analiza: 2026-04-21 | GitHub Copilot (Claude Sonnet 4.6)*

@@ -1,6 +1,6 @@
 """Utility for aggregating user OCR corrections.
 
-The directory ``reports/textract/corrections`` contains one JSON file per
+The directory ``reports/paddle/corrections`` contains one JSON file per
 interaction, each with fields ``request_id`` and ``corrections`` (list of
 objects with 'component'/'value').  We want to be able to read all of them,
 count total corrections, list most frequently corrected components, etc.
@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List
 
 
-def load_all_corrections(directory: Path = Path("reports/textract/corrections")) -> List[Dict]:
+def load_all_corrections(directory: Path = Path("reports/paddle/corrections")) -> List[Dict]:
     files = []
     if not directory.exists():
         return files
@@ -25,7 +25,7 @@ def load_all_corrections(directory: Path = Path("reports/textract/corrections"))
     return files
 
 
-def summarize_corrections(directory: Path = Path("reports/textract/corrections")) -> Dict[str, any]:
+def summarize_corrections(directory: Path = Path("reports/paddle/corrections")) -> Dict[str, any]:
     """Return a summary dictionary containing:
     - total_files: number of correction files
     - total_entries: total number of corrected tokens across all files

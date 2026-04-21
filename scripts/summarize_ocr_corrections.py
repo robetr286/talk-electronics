@@ -17,7 +17,7 @@ from talk_electronic import ocr_corrections
 
 
 def main():
-    directory = Path("reports/textract/corrections")
+    directory = Path("reports/paddle/corrections")
     summary = ocr_corrections.summarize_corrections(directory=directory)
     print("OCR Corrections summary:")
     pprint.pprint(summary)

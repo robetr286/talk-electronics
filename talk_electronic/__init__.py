@@ -98,7 +98,6 @@ def create_app(test_config: Mapping[str, Any] | None = None) -> Flask:
     from .routes.processing import processing_bp
     from .routes.segment import segment_bp
     from .routes.symbol_detection import symbol_detection_bp
-    from .routes.textract import textract_bp
     from .routes.paddleocr_route import paddleocr_bp
 
     app.register_blueprint(core_bp)
@@ -112,7 +111,6 @@ def create_app(test_config: Mapping[str, Any] | None = None) -> Flask:
     app.register_blueprint(symbol_detection_bp)
     app.register_blueprint(ignore_bp)
     app.register_blueprint(edge_connectors_bp)
-    app.register_blueprint(textract_bp)
     app.register_blueprint(paddleocr_bp)
 
     line_config_path = project_root / "configs" / "line_detection.defaults.json"
